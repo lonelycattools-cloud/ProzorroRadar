@@ -59,6 +59,12 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- Foreground Service for persistent scanning even when app is minimized -->
+        <service
+            android:name=".service.ScanForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
     </application>
 
 </manifest>

@@ -1,6 +1,7 @@
 package ua.gov.prozorro.radar.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +40,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -69,7 +72,7 @@ fun DateScanDialog(
     currentCheckpointDate: String,
     initialCpvCodes: String,
     onDismiss: () -> Unit,
-    onStartScan: (startDateIso: String, selectedCpvs: String) -> Unit
+    onStartScan: (startDateIso: String, selectedCpvs: String, resetCheckpoint: Boolean) -> Unit
 ) {
     val context = LocalContext.current
     val catalog = remember { CpvCatalog.getInstance(context) }
@@ -100,6 +103,7 @@ fun DateScanDialog(
 
     var selectedPreset by remember { mutableStateOf(sevenDaysIso) }
     var customDateInput by remember { mutableStateOf(sdfDisplay.format(sevenDaysAgo.time)) }
+    var resetCheckpoint by remember { mutableStateOf(true) }
 
     // Categories state
     var selectedCpvs by remember { mutableStateOf(initialCpvCodes) }
@@ -248,6 +252,52 @@ fun DateScanDialog(
                     )
                 }
 
+                // Checkpoint Reset Switch Card
+                Card(
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { resetCheckpoint = !resetCheckpoint }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 8.dp)
+                        ) {
+                            Text(
+                                text = "Скинути збережену точку зупинки",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Сканувати всю обрану глибину без зупинки на старих дублях (поточна: $currentCheckpointDate)",
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = resetCheckpoint,
+                            onCheckedChange = { resetCheckpoint = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = EmeraldPrimary
+                            )
+                        )
+                    }
+                }
+
                 // Section 2: CPV Categories Selection
                 Column {
                     Row(
@@ -328,7 +378,7 @@ fun DateScanDialog(
             Button(
                 onClick = {
                     val finalIso = if (selectedPreset.contains("T")) selectedPreset else "${customDateInput.trim()}T00:00:00"
-                    onStartScan(finalIso, selectedCpvs)
+                    onStartScan(finalIso, selectedCpvs, resetCheckpoint)
                     onDismiss()
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),

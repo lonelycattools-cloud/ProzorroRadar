@@ -137,9 +137,10 @@ fun MainScreen(
                         isScanning = isScanning,
                         currentCpvCodes = viewModel.preferences.cpvCodes,
                         onScanNow = { viewModel.scanNow(deepScan = false) },
-                        onDeepScan = { viewModel.scanNow(deepScan = true) },
+                        onDeepScan = { resetCheckpoint -> viewModel.scanNow(deepScan = true, resetCheckpoint = resetCheckpoint) },
                         onStopScan = { viewModel.stopScan() },
-                        onScanFromDate = { dateIso, cpvs -> viewModel.scanFromDate(dateIso, cpvs) },
+                        onScanFromDate = { dateIso, cpvs, resetCheckpoint -> viewModel.scanFromDate(dateIso, cpvs, resetCheckpoint) },
+                        onResetCheckpoint = { viewModel.resetSyncOffset() },
                         onToggleFavorite = { id, curr -> viewModel.toggleFavorite(id, curr) },
                         onNavigateToArchive = { currentTab = AppTab.ARCHIVE },
                         onExportAll = { viewModel.exportAllTenders(context) }

@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.TravelExplore
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -58,6 +59,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ua.gov.prozorro.radar.export.ExcelExporter
@@ -81,15 +83,18 @@ fun DashboardScreen(
     isScanning: Boolean,
     currentCpvCodes: String,
     onScanNow: () -> Unit,
-    onDeepScan: () -> Unit,
+    onDeepScan: (resetCheckpoint: Boolean) -> Unit,
     onStopScan: () -> Unit,
-    onScanFromDate: (String, String) -> Unit,
+    onScanFromDate: (startDateIso: String, selectedCpvs: String, resetCheckpoint: Boolean) -> Unit,
+    onResetCheckpoint: () -> Unit = {},
     onToggleFavorite: (String, Boolean) -> Unit,
     onNavigateToArchive: () -> Unit,
     onExportAll: () -> Unit
 ) {
     var selectedTender by remember { mutableStateOf<Tender?>(null) }
     var showDateScanDialog by remember { mutableStateOf(false) }
+    var showDeepScanConfirmDialog by remember { mutableStateOf(false) }
+    var showResetCheckpointDialog by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
@@ -107,7 +112,17 @@ fun DashboardScreen(
                 isScanning = isScanning,
                 metrics = metrics,
                 onScanNow = onScanNow,
-                onDeepScan = onDeepScan,
+                onDeepScan = {
+                    if (metrics.lastSyncDate.isNotBlank() &&
+                        metrics.lastSyncDate != "Ще не встановлено" &&
+                        metrics.lastSyncDate != "Скинуто"
+                    ) {
+                        showDeepScanConfirmDialog = true
+                    } else {
+                        onDeepScan(true)
+                    }
+                },
+                onResetCheckpoint = { showResetCheckpointDialog = true },
                 onStopScan = onStopScan,
                 onOpenDateScanDialog = { showDateScanDialog = true },
                 onExportAll = onExportAll
@@ -182,14 +197,95 @@ fun DashboardScreen(
         )
     }
 
+    if (showDeepScanConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeepScanConfirmDialog = false },
+            title = {
+                Text(
+                    text = "Глибоке сканування (30 днів)",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "Поточна точка зупинки: ${metrics.lastSyncDate}.\n\nСкинути точку зупинки, щоб гарантовано просканувати всі закупівлі за 30 днів без зупинки на збережених дублях?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeepScanConfirmDialog = false
+                        onDeepScan(true)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                ) {
+                    Text("Скинути і шукати")
+                }
+            },
+            dismissButton = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = { showDeepScanConfirmDialog = false }) {
+                        Text("Скасувати")
+                    }
+                    TextButton(
+                        onClick = {
+                            showDeepScanConfirmDialog = false
+                            onDeepScan(false)
+                        }
+                    ) {
+                        Text("Шукати без скидання")
+                    }
+                }
+            }
+        )
+    }
+
+    if (showResetCheckpointDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetCheckpointDialog = false },
+            title = {
+                Text(
+                    text = "Скинути точку зупинки?",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "Поточна точка: ${metrics.lastSyncDate}.\n\nСкидання дозволить сканеру завантажувати торги вглиб у минуле, не зупиняючись на вже знайдених дублях.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showResetCheckpointDialog = false
+                        onResetCheckpoint()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                ) {
+                    Text("Скинути")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetCheckpointDialog = false }) {
+                    Text("Скасувати")
+                }
+            }
+        )
+    }
+
     if (showDateScanDialog) {
         DateScanDialog(
             currentCheckpointDate = metrics.lastSyncDate,
             initialCpvCodes = currentCpvCodes,
             onDismiss = { showDateScanDialog = false },
-            onStartScan = { isoDate, selectedCpvs ->
+            onStartScan = { isoDate, selectedCpvs, resetCp ->
                 showDateScanDialog = false
-                onScanFromDate(isoDate, selectedCpvs)
+                onScanFromDate(isoDate, selectedCpvs, resetCp)
             }
         )
     }
@@ -241,6 +337,7 @@ private fun ScannerControlCard(
     metrics: DashboardMetrics,
     onScanNow: () -> Unit,
     onDeepScan: () -> Unit,
+    onResetCheckpoint: () -> Unit,
     onStopScan: () -> Unit,
     onOpenDateScanDialog: () -> Unit,
     onExportAll: () -> Unit
@@ -299,20 +396,35 @@ private fun ScannerControlCard(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                    .clickable(onClick = onResetCheckpoint)
                     .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(
-                    imageVector = Icons.Default.Timeline,
-                    contentDescription = null,
-                    tint = EmeraldPrimary,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Timeline,
+                        contentDescription = null,
+                        tint = EmeraldPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Точка зупинки: ${metrics.lastSyncDate}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Точка зупинки: ${metrics.lastSyncDate}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = "Скинути",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = EmeraldPrimary
                 )
             }
 

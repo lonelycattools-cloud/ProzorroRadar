@@ -1,6 +1,7 @@
 package ua.gov.prozorro.radar.network
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -25,44 +26,74 @@ class ProzorroApiService {
         .retryOnConnectionFailure(true)
         .build()
 
-    suspend fun fetchFeed(url: String): FeedResponse? = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder()
-                .url(url)
-                .header("User-Agent", "ProzorroRadar-Android/1.0")
-                .build()
+    suspend fun fetchFeed(url: String, maxRetries: Int = 3): FeedResponse? = withContext(Dispatchers.IO) {
+        var attempt = 0
+        while (attempt < maxRetries) {
+            attempt++
+            try {
+                val request = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", "ProzorroRadar-Android/1.0")
+                    .build()
 
-            val response = client.newCall(request).execute()
-            if (response.isSuccessful) {
-                val bodyStr = response.body?.string() ?: return@withContext null
-                return@withContext json.decodeFromString<FeedResponse>(bodyStr)
-            } else if (response.code == 429) {
-                // Rate limit
-                return@withContext null
+                val response = client.newCall(request).execute()
+                if (response.isSuccessful) {
+                    val bodyStr = response.body?.string() ?: return@withContext null
+                    return@withContext json.decodeFromString<FeedResponse>(bodyStr)
+                } else if (response.code == 429) {
+                    // Rate limit: exponential backoff
+                    response.close()
+                    delay(2000L * attempt)
+                } else {
+                    response.close()
+                    if (attempt < maxRetries) {
+                        delay(1000L * attempt)
+                    }
+                }
+            } catch (e: Exception) {
+                if (attempt >= maxRetries) {
+                    e.printStackTrace()
+                } else {
+                    delay(1200L * attempt)
+                }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
         null
     }
 
-    suspend fun fetchTenderDetail(id: String): Tender? = withContext(Dispatchers.IO) {
-        try {
-            val url = "$BASE_API_URL/$id"
-            val request = Request.Builder()
-                .url(url)
-                .header("User-Agent", "ProzorroRadar-Android/1.0")
-                .build()
+    suspend fun fetchTenderDetail(id: String, maxRetries: Int = 3): Tender? = withContext(Dispatchers.IO) {
+        var attempt = 0
+        while (attempt < maxRetries) {
+            attempt++
+            try {
+                val url = "$BASE_API_URL/$id"
+                val request = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", "ProzorroRadar-Android/1.0")
+                    .build()
 
-            val response = client.newCall(request).execute()
-            if (response.isSuccessful) {
-                val bodyStr = response.body?.string() ?: return@withContext null
-                val jsonEl = json.parseToJsonElement(bodyStr).jsonObject
-                val dataObj = jsonEl["data"]?.jsonObject ?: return@withContext null
-                return@withContext TenderParser.parseTender(dataObj)
+                val response = client.newCall(request).execute()
+                if (response.isSuccessful) {
+                    val bodyStr = response.body?.string() ?: return@withContext null
+                    val jsonEl = json.parseToJsonElement(bodyStr).jsonObject
+                    val dataObj = jsonEl["data"]?.jsonObject ?: return@withContext null
+                    return@withContext TenderParser.parseTender(dataObj)
+                } else if (response.code == 429) {
+                    response.close()
+                    delay(1500L * attempt)
+                } else {
+                    response.close()
+                    if (attempt < maxRetries) {
+                        delay(1000L)
+                    }
+                }
+            } catch (e: Exception) {
+                if (attempt >= maxRetries) {
+                    // Suppress stack trace on final retry
+                } else {
+                    delay(1000L)
+                }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
         null
     }

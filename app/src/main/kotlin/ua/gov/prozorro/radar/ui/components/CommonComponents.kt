@@ -213,32 +213,35 @@ fun TenderCard(
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (tender.valueAmount > 0) {
-                        Text(
-                            text = tender.formattedBudget,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = EmeraldPrimary
-                            )
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(6.dp))
-                    IconButton(
-                        onClick = onToggleFavorite,
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (tender.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                            contentDescription = "Обране",
-                            tint = if (tender.isFavorite) StatusWarning else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                IconButton(
+                    onClick = onToggleFavorite,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = if (tender.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                        contentDescription = "Обране",
+                        tint = if (tender.isFavorite) StatusWarning else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // Dedicated Budget Row (Separate line for budget of any length)
+            if (tender.valueAmount > 0) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = tender.formattedBudget,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = EmeraldPrimary
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Title
             Text(

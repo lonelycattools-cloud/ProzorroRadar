@@ -1,5 +1,6 @@
 package ua.gov.prozorro.radar.service
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -44,8 +45,18 @@ class NotificationHelper(private val context: Context) {
                 enableVibration(false)
             }
 
+            val channelScanning = NotificationChannel(
+                CHANNEL_SCANNING,
+                "Фонове сканування Prozorro",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Повідомлення під час активного фонового пошуку закупівель"
+                enableVibration(false)
+            }
+
             notificationManager.createNotificationChannel(channelNormal)
             notificationManager.createNotificationChannel(channelSilent)
+            notificationManager.createNotificationChannel(channelScanning)
         }
     }
 
@@ -122,9 +133,43 @@ class NotificationHelper(private val context: Context) {
         }
     }
 
+    fun buildScanningNotification(
+        stopPendingIntent: PendingIntent? = null
+    ): Notification {
+        val openAppIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val openAppPendingIntent = PendingIntent.getActivity(
+            context,
+            0,
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_SCANNING)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("Prozorro Радар: Триває сканування")
+            .setContentText("Пошук активних закупівель у стрічці Prozorro…")
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setContentIntent(openAppPendingIntent)
+
+        if (stopPendingIntent != null) {
+            builder.addAction(
+                android.R.drawable.ic_media_pause,
+                "Зупинити",
+                stopPendingIntent
+            )
+        }
+
+        return builder.build()
+    }
+
     companion object {
         const val CHANNEL_TENDERS = "prozorro_tenders_alerts"
         const val CHANNEL_SILENT = "prozorro_tenders_silent"
+        const val CHANNEL_SCANNING = "prozorro_scanning_service"
         const val NOTIFICATION_ID_TENDERS = 1001
+        const val NOTIFICATION_ID_SCANNING = 1002
     }
 }

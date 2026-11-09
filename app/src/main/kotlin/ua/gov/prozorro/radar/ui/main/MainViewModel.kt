@@ -19,6 +19,7 @@ import ua.gov.prozorro.radar.model.Tender
 import ua.gov.prozorro.radar.network.AppUpdateManager
 import ua.gov.prozorro.radar.network.ProzorroScannerEngine
 import ua.gov.prozorro.radar.network.UpdateInfo
+import ua.gov.prozorro.radar.service.ScanForegroundService
 import java.io.File
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -56,6 +57,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (preferences.autoUpdateEnabled) {
             checkForUpdate(isManual = false)
         }
+        viewModelScope.launch {
+            repository.isScanning.collect { scanning ->
+                if (!scanning) {
+                    _topEntities.value = repository.getTopProcuringEntities()
+                    _topCpvs.value = repository.getTopCpvCategories()
+                }
+            }
+        }
     }
 
     fun loadData() {
@@ -66,32 +75,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun scanNow(deepScan: Boolean = false) {
-        viewModelScope.launch {
-            val res = scannerEngine.scanNow(deepScan = deepScan)
-            repository.refreshData()
-            _topEntities.value = repository.getTopProcuringEntities()
-            _topCpvs.value = repository.getTopCpvCategories()
-            Toast.makeText(getApplication(), res.message, Toast.LENGTH_SHORT).show()
-        }
+    fun scanNow(deepScan: Boolean = false, resetCheckpoint: Boolean = false) {
+        ScanForegroundService.startScan(
+            context = getApplication(),
+            startDateIso = null,
+            deepScan = deepScan,
+            resetCheckpoint = resetCheckpoint
+        )
+        Toast.makeText(getApplication(), "Сканування запущено у фоні", Toast.LENGTH_SHORT).show()
     }
 
     fun stopScan() {
+        ScanForegroundService.stopScan(getApplication())
         scannerEngine.requestStop()
         Toast.makeText(getApplication(), "Зупинка сканування...", Toast.LENGTH_SHORT).show()
     }
 
-    fun scanFromDate(startDateIso: String, cpvCodes: String? = null) {
-        viewModelScope.launch {
-            if (!cpvCodes.isNullOrBlank()) {
-                preferences.cpvCodes = cpvCodes
-            }
-            val res = scannerEngine.scanNow(startDateIso = startDateIso, deepScan = true)
-            repository.refreshData()
-            _topEntities.value = repository.getTopProcuringEntities()
-            _topCpvs.value = repository.getTopCpvCategories()
-            Toast.makeText(getApplication(), res.message, Toast.LENGTH_LONG).show()
+    fun scanFromDate(startDateIso: String, cpvCodes: String? = null, resetCheckpoint: Boolean = false) {
+        if (!cpvCodes.isNullOrBlank()) {
+            preferences.cpvCodes = cpvCodes
         }
+        ScanForegroundService.startScan(
+            context = getApplication(),
+            startDateIso = startDateIso,
+            deepScan = true,
+            resetCheckpoint = resetCheckpoint
+        )
+        Toast.makeText(getApplication(), "Сканування з дати запущено у фоні", Toast.LENGTH_SHORT).show()
     }
 
     fun clearAllTenders() {

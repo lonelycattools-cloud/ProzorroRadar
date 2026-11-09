@@ -41,7 +41,11 @@ class ProzorroScannerEngine(private val context: Context) {
         ScanController.requestStop()
     }
 
-    suspend fun scanNow(startDateIso: String? = null, deepScan: Boolean = false): ScanResult = withContext(Dispatchers.IO) {
+    suspend fun scanNow(
+        startDateIso: String? = null,
+        deepScan: Boolean = false,
+        resetCheckpoint: Boolean = false
+    ): ScanResult = withContext(Dispatchers.IO) {
         ScanController.reset()
         repository.setScanning(true)
         val startTime = System.currentTimeMillis()
@@ -49,6 +53,10 @@ class ProzorroScannerEngine(private val context: Context) {
         var totalExamined = 0
 
         try {
+            if (resetCheckpoint) {
+                preferences.resetSyncOffset()
+            }
+
             val cpvPrefixes = preferences.getCleanCpvPrefixes()
             val searchStatus = preferences.searchStatus.trim()
 
@@ -56,8 +64,8 @@ class ProzorroScannerEngine(private val context: Context) {
             val existingIds = repository.getExistingIds(cpvPrefixes).toMutableSet()
 
             val isCustomStart = !startDateIso.isNullOrBlank()
-            // History/Deep mode: if explicitly requested or if fewer than 50 tenders exist for this category
-            val isDeepHistoryMode = deepScan || isCustomStart || existingIds.size < 50
+            // History/Deep mode: if explicitly requested, custom date, checkpoint reset, or if fewer than 50 tenders exist
+            val isDeepHistoryMode = deepScan || isCustomStart || resetCheckpoint || existingIds.size < 50
 
             val thirtyDaysAgoIso = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(
                 Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000)
@@ -168,9 +176,9 @@ class ProzorroScannerEngine(private val context: Context) {
 
                 if (stopScan && candidatesToFetch.isEmpty()) break
 
-                // Concurrently fetch candidate details (20 parallel coroutines)
+                // Concurrently fetch candidate details (12 parallel coroutines)
                 if (candidatesToFetch.isNotEmpty()) {
-                    val semaphore = Semaphore(20)
+                    val semaphore = Semaphore(12)
                     val deferredList = candidatesToFetch.map { candidate ->
                         async {
                             if (ScanController.isCancellationRequested) null
