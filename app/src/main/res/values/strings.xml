@@ -1,0 +1,63 @@
+<resources>
+    <string name="app_name">Prozorro Радар</string>
+    <string name="app_subtitle">Монітор державних закупівель</string>
+
+    <!-- Navigation -->
+    <string name="nav_dashboard">Дашборд</string>
+    <string name="nav_archive">Архів</string>
+    <string name="nav_reports">Звіти</string>
+    <string name="nav_settings">Налаштування</string>
+    <string name="nav_help">Довідка</string>
+
+    <!-- Dashboard -->
+    <string name="metrics_total_tenders">Всього тендерів</string>
+    <string name="metrics_today">Нових за 24г</string>
+    <string name="metrics_budget_total">Загальний бюджет</string>
+    <string name="metrics_active">Активні торги</string>
+    <string name="metrics_urgent">Термінові (&lt; 48г)</string>
+    <string name="scanner_status">Статус сканера</string>
+    <string name="scanner_idle">Очікування</string>
+    <string name="scanner_running">Сканування Prozorro…</string>
+    <string name="action_scan_now">Сканувати зараз</string>
+    <string name="action_export_excel">Експорт в Excel</string>
+    <string name="action_open_prozorro">Відкрити на Prozorro</string>
+    <string name="action_share">Поділитися</string>
+    <string name="recent_tenders">Останні відібрані тендери</string>
+
+    <!-- Permissions Explanations -->
+    <string name="perm_title">Необхідні дозволи для автономної роботи</string>
+    <string name="perm_subtitle">Щоб Prozorro Радар міг автоматично відстежувати закупівлі за розкладом та вчасно надсилати сповіщення, надайте такі дозволи:</string>
+    <string name="perm_notifications">Push-сповіщення</string>
+    <string name="perm_notifications_desc">Миттєве інформування про появу нових тендерів у ваших обраних категоріях.</string>
+    <string name="perm_battery">Робота без обмежень акумулятора</string>
+    <string name="perm_battery_desc">Дозволяє системі виконувати регулярне фонове сканування, навіть коли телефон у режимі сну.</string>
+    <string name="perm_autostart">Автозапуск після перезавантаження</string>
+    <string name="perm_autostart_desc">Автоматичне відновлення графіку перевірки закупівель після перезавантаження пристрою.</string>
+    <string name="perm_grant_all">Надати дозволи</string>
+    <string name="perm_done">Усі дозволи надано</string>
+    <string name="perm_open_settings">Відкрити системні налаштування</string>
+
+    <!-- Settings -->
+    <string name="settings_scanning_title">Розклад та сканування</string>
+    <string name="settings_scan_interval">Інтервал перевірки</string>
+    <string name="settings_auto_update">Автооновлення у фоні</string>
+    <string name="settings_cpv_title">Категорії тендерів (CPV)</string>
+    <string name="settings_cpv_hint">Введіть коди через кому (напр. 3023, 4500)</string>
+    <string name="settings_email_title">Відправка на Email</string>
+    <string name="settings_email_recipients">Отримувачі (через кому)</string>
+    <string name="settings_notifications_title">Сповіщення та режим відпочинку</string>
+    <string name="settings_dnd_title">Режим «Не турбувати на ніч»</string>
+    <string name="settings_dnd_desc">Беззвучний режим з 22:00 до 08:00</string>
+    <string name="settings_feedback_title">Зворотний зв\'язок та пропозиції</string>
+    <string name="settings_feedback_desc">Напишіть нам, і ми відповімо на вашу пошту</string>
+
+    <!-- Feedback -->
+    <string name="feedback_sender_email">Ваш Email</string>
+    <string name="feedback_type">Тема звернення</string>
+    <string name="feedback_message">Ваше повідомлення або пропозиція</string>
+    <string name="feedback_send_btn">Надіслати розробникам</string>
+    <string name="feedback_success">Дякуємо! Ваше звернення надіслано.</string>
+
+    <!-- Currency & Common -->
+    <string name="currency_uah">₴</string>
+</resources>

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Group centered around (54, 54) -->
+    <group
+        android:pivotX="54"
+        android:pivotY="54">
+
+        <!-- Top Antenna Ball & Stick (Waze signature) -->
+        <path
+            android:fillColor="#00E676"
+            android:pathData="M52,24 h4 v8 h-4 z" />
+        <path
+            android:fillColor="#00E676"
+            android:pathData="M54,23 m-4,0 a4,4 0 1,1 8,0 a4,4 0 1,1 -8,0" />
+
+        <!-- Wheels (Bottom Black/Slate with White Hubs) -->
+        <!-- Left Wheel -->
+        <path
+            android:fillColor="#1E293B"
+            android:pathData="M37,76 m-7,0 a7,7 0 1,1 14,0 a7,7 0 1,1 -14,0" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M37,76 m-3,0 a3,3 0 1,1 6,0 a3,3 0 1,1 -6,0" />
+
+        <!-- Right Wheel -->
+        <path
+            android:fillColor="#1E293B"
+            android:pathData="M71,76 m-7,0 a7,7 0 1,1 14,0 a7,7 0 1,1 -14,0" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M71,76 m-3,0 a3,3 0 1,1 6,0 a3,3 0 1,1 -6,0" />
+
+        <!-- Main Body: Smooth Organic Rounded Waze Silhouette in Radiant Emerald Green -->
+        <path
+            android:fillColor="#00C853"
+            android:pathData="M32,44 C32,34 42,32 54,32 C66,32 76,34 76,44 C76,48 78,54 78,60 C78,70 70,74 54,74 C38,74 30,70 30,60 C30,54 32,48 32,44 Z" />
+
+        <!-- Soft Highlight Curve at Top -->
+        <path
+            android:fillColor="#26FFFFFF"
+            android:pathData="M35,44 C35,36 44,34 54,34 C64,34 73,36 73,44 C73,46 72,49 71,51 C66,45 58,42 54,42 C50,42 42,45 37,51 C36,49 35,46 35,44 Z" />
+
+        <!-- Eyes (Waze Iconic Big Curious Radar Eyes) -->
+        <!-- Left Eye Outer White -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M43,52 m-6,0 a6,6 0 1,1 12,0 a6,6 0 1,1 -12,0" />
+        <!-- Left Pupil Black -->
+        <path
+            android:fillColor="#0B111A"
+            android:pathData="M44,52 m-3,0 a3,3 0 1,1 6,0 a3,3 0 1,1 -6,0" />
+        <!-- Left Pupil Glint -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M45,51 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0" />
+
+        <!-- Right Eye Outer White -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M65,52 m-6,0 a6,6 0 1,1 12,0 a6,6 0 1,1 -12,0" />
+        <!-- Right Pupil Black -->
+        <path
+            android:fillColor="#0B111A"
+            android:pathData="M66,52 m-3,0 a3,3 0 1,1 6,0 a3,3 0 1,1 -6,0" />
+        <!-- Right Pupil Glint -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M67,51 m-1,0 a1,1 0 1,1 2,0 a1,1 0 1,1 -2,0" />
+
+        <!-- Friendly Smile / Grille -->
+        <path
+            android:strokeColor="#003912"
+            android:strokeWidth="2.5"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M48,64 Q54,68 60,64" />
+
+        <!-- Prozorro Radar Wave from Antenna -->
+        <path
+            android:strokeColor="#00E676"
+            android:strokeWidth="2"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M46,18 C51,15 57,15 62,18" />
+        <path
+            android:strokeColor="#8000E676"
+            android:strokeWidth="1.5"
+            android:strokeLineCap="round"
+            android:fillColor="#00000000"
+            android:pathData="M42,13 C50,9 58,9 66,13" />
+
+    </group>
+</vector>
