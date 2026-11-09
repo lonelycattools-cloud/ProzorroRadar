@@ -120,7 +120,7 @@ fun DashboardScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Останні знайдені закупівлі",
+                    text = "Знайдені закупівлі",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -290,49 +290,53 @@ private fun ScannerControlCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Button(
-                    onClick = onScanNow,
-                    enabled = !isScanning,
-                    modifier = Modifier.weight(1.1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
-                    shape = RoundedCornerShape(10.dp)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    if (isScanning) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(18.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Button(
+                        onClick = onScanNow,
+                        enabled = !isScanning,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        if (isScanning) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Пошук…")
+                        } else {
+                            Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Оновити зараз")
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = onOpenDateScanDialog,
+                        enabled = !isScanning,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(18.dp), tint = EmeraldPrimary)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Оновити", maxLines = 1)
+                        Text("З дати…", color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
 
                 OutlinedButton(
-                    onClick = onOpenDateScanDialog,
-                    enabled = !isScanning,
-                    modifier = Modifier.weight(1.1f),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Icon(imageVector = Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(18.dp), tint = EmeraldPrimary)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("З дати…", maxLines = 1, color = MaterialTheme.colorScheme.onSurface)
-                }
-
-                OutlinedButton(
                     onClick = onExportAll,
-                    modifier = Modifier.weight(0.9f),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(imageVector = Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp), tint = EmeraldPrimary)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Excel", maxLines = 1, color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Експорт пулу в Excel (.xlsx)", color = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
@@ -385,7 +389,7 @@ private fun MetricsGrid(metrics: DashboardMetrics) {
                 modifier = Modifier.weight(1f),
                 title = "Термінові дедлайни",
                 value = metrics.urgentDeadlinesCount.toString(),
-                subValue = "&lt; 48 год",
+                subValue = "< 48 год",
                 icon = Icons.Default.Alarm,
                 accentColor = StatusUrgent
             )
