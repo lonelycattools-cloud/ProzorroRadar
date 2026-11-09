@@ -69,24 +69,48 @@ class AppPreferences(context: Context) {
     }
 
     var smtpHost: String
-        get() = prefs.getString(KEY_SMTP_HOST, "smtp.gmail.com") ?: "smtp.gmail.com"
+        get() {
+            val v = prefs.getString(KEY_SMTP_HOST, null)
+            return if (v.isNullOrBlank()) DEFAULT_SMTP_HOST else v
+        }
         set(value) = prefs.edit().putString(KEY_SMTP_HOST, value).apply()
 
     var smtpPort: Int
-        get() = prefs.getInt(KEY_SMTP_PORT, 587)
+        get() {
+            val p = prefs.getInt(KEY_SMTP_PORT, DEFAULT_SMTP_PORT)
+            return if (p <= 0) DEFAULT_SMTP_PORT else p
+        }
         set(value) = prefs.edit().putInt(KEY_SMTP_PORT, value).apply()
 
     var smtpUser: String
-        get() = prefs.getString(KEY_SMTP_USER, "lonelycattools@gmail.com") ?: "lonelycattools@gmail.com"
+        get() {
+            val u = prefs.getString(KEY_SMTP_USER, null)
+            return if (u.isNullOrBlank()) DEFAULT_SMTP_USER else u
+        }
         set(value) = prefs.edit().putString(KEY_SMTP_USER, value).apply()
 
     var smtpPass: String
-        get() = prefs.getString(KEY_SMTP_PASS, "") ?: ""
+        get() {
+            val p = prefs.getString(KEY_SMTP_PASS, null)
+            return if (p.isNullOrBlank()) DEFAULT_SMTP_PASS else p
+        }
         set(value) = prefs.edit().putString(KEY_SMTP_PASS, value).apply()
 
     var smtpUseTls: Boolean
         get() = prefs.getBoolean(KEY_SMTP_USE_TLS, true)
         set(value) = prefs.edit().putBoolean(KEY_SMTP_USE_TLS, value).apply()
+
+    fun resetSmtpToDefault() {
+        smtpHost = DEFAULT_SMTP_HOST
+        smtpPort = DEFAULT_SMTP_PORT
+        smtpUser = DEFAULT_SMTP_USER
+        smtpPass = DEFAULT_SMTP_PASS
+        smtpUseTls = true
+    }
+
+    fun isDefaultSmtp(): Boolean {
+        return smtpUser.trim().equals(DEFAULT_SMTP_USER, ignoreCase = true)
+    }
 
     var userContactEmail: String
         get() = prefs.getString(KEY_USER_CONTACT_EMAIL, "lonelycattools@gmail.com") ?: "lonelycattools@gmail.com"
@@ -111,6 +135,11 @@ class AppPreferences(context: Context) {
     }
 
     companion object {
+        const val DEFAULT_SMTP_HOST = "smtp.gmail.com"
+        const val DEFAULT_SMTP_PORT = 587
+        const val DEFAULT_SMTP_USER = "lonelycattools@gmail.com"
+        const val DEFAULT_SMTP_PASS = "mfjvsfyzgtelifxd"
+
         private const val KEY_SCAN_INTERVAL = "scan_interval"
         private const val KEY_CPV_CODES = "cpv_codes"
         private const val KEY_SEARCH_STATUS = "search_status"

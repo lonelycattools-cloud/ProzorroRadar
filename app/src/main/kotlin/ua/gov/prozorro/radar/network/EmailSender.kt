@@ -22,10 +22,10 @@ class EmailSender(private val context: Context) {
 
     suspend fun testSmtpConnection(): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val host = preferences.smtpHost
+            val host = preferences.smtpHost.trim()
             val port = preferences.smtpPort
-            val user = preferences.smtpUser
-            val pass = preferences.smtpPass
+            val user = preferences.smtpUser.trim()
+            val pass = preferences.smtpPass.replace(" ", "").trim()
 
             if (host.isBlank() || user.isBlank() || pass.isBlank()) {
                 return@withContext Result.failure(Exception("Заповніть хост, логін та пароль SMTP"))
@@ -40,9 +40,9 @@ class EmailSender(private val context: Context) {
                 to = listOf(user),
                 replyTo = user,
                 subject = "Prozorro Radar: Тестове повідомлення",
-                bodyHtml = "<h3>Тест SMTP зв\'язку успішний!</h3><p>Prozorro Радар готовий до розсилки сповіщень.</p>"
+                bodyHtml = "<h3>Тест SMTP зв\'язку успішний!</h3><p>Prozorro Радар готовий до розсилки сповіщень через скриньку $user.</p>"
             )
-            Result.success("З'єднання успішно встановлено! Тестовий лист надіслано.")
+            Result.success("З'єднання успішно встановлено! Тестовий лист надіслано на $user.")
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -59,10 +59,10 @@ class EmailSender(private val context: Context) {
             return@withContext Result.success(0)
         }
 
-        val host = preferences.smtpHost
+        val host = preferences.smtpHost.trim()
         val port = preferences.smtpPort
-        val user = preferences.smtpUser
-        val pass = preferences.smtpPass
+        val user = preferences.smtpUser.trim()
+        val pass = preferences.smtpPass.replace(" ", "").trim()
 
         if (host.isBlank() || user.isBlank() || pass.isBlank()) {
             return@withContext Result.failure(Exception("SMTP не налаштовано в Налаштуваннях"))
@@ -94,10 +94,10 @@ class EmailSender(private val context: Context) {
         type: String,
         message: String
     ): Result<String> = withContext(Dispatchers.IO) {
-        val host = preferences.smtpHost
+        val host = preferences.smtpHost.trim()
         val port = preferences.smtpPort
-        val user = preferences.smtpUser
-        val pass = preferences.smtpPass
+        val user = preferences.smtpUser.trim()
+        val pass = preferences.smtpPass.replace(" ", "").trim()
 
         if (host.isNotBlank() && user.isNotBlank() && pass.isNotBlank()) {
             try {
@@ -223,7 +223,12 @@ class EmailSender(private val context: Context) {
         subject: String,
         bodyHtml: String
     ) {
-        val socket = Socket(host, port)
+        val cleanHost = host.trim()
+        val cleanUser = user.trim()
+        val cleanPass = pass.replace(" ", "").trim()
+        val cleanFrom = from.trim().ifEmpty { cleanUser }
+
+        val socket = Socket(cleanHost, port)
         socket.soTimeout = 20000
 
         var reader = BufferedReader(InputStreamReader(socket.getInputStream()))
@@ -249,7 +254,7 @@ class EmailSender(private val context: Context) {
             send("STARTTLS")
             readLine() // 220
             val sslSocket = (SSLSocketFactory.getDefault() as SSLSocketFactory)
-                .createSocket(socket, host, port, true) as SSLSocket
+                .createSocket(socket, cleanHost, port, true) as SSLSocket
             sslSocket.startHandshake()
             reader = BufferedReader(InputStreamReader(sslSocket.getInputStream()))
             writer = PrintWriter(OutputStreamWriter(sslSocket.getOutputStream()), true)
@@ -264,22 +269,25 @@ class EmailSender(private val context: Context) {
         // AUTH LOGIN
         send("AUTH LOGIN")
         readLine() // 334 Username:
-        send(Base64.encodeToString(user.toByteArray(), Base64.NO_WRAP))
+        send(Base64.encodeToString(cleanUser.toByteArray(Charsets.UTF_8), Base64.NO_WRAP))
         readLine() // 334 Password:
-        send(Base64.encodeToString(pass.toByteArray(), Base64.NO_WRAP))
+        send(Base64.encodeToString(cleanPass.toByteArray(Charsets.UTF_8), Base64.NO_WRAP))
         val authResult = readLine()
         if (!authResult.startsWith("235")) {
             throw Exception("SMTP Auth Failed: $authResult")
         }
 
         // MAIL FROM
-        send("MAIL FROM:<$from>")
+        send("MAIL FROM:<$cleanFrom>")
         readLine()
 
         // RCPT TO
         for (recipient in to) {
-            send("RCPT TO:<$recipient>")
-            readLine()
+            val cleanRecipient = recipient.trim()
+            if (cleanRecipient.isNotEmpty()) {
+                send("RCPT TO:<$cleanRecipient>")
+                readLine()
+            }
         }
 
         // DATA
@@ -287,9 +295,9 @@ class EmailSender(private val context: Context) {
         readLine() // 354
 
         // Headers
-        send("From: Prozorro Radar <$from>")
+        send("From: Prozorro Radar <$cleanFrom>")
         send("To: ${to.joinToString(", ")}")
-        send("Reply-To: $replyTo")
+        send("Reply-To: ${replyTo.trim().ifEmpty { cleanUser }}")
         send("Subject: =?UTF-8?B?${Base64.encodeToString(subject.toByteArray(), Base64.NO_WRAP)}?=")
         send("MIME-Version: 1.0")
         send("Content-Type: text/html; charset=UTF-8")
