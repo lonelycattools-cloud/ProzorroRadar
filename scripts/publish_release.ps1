@@ -4,7 +4,8 @@ param(
     [string]$Title = "",
     [string]$Notes = "Оновлення стабільності та оптимізація",
     [string]$Token = $env:GITHUB_TOKEN,
-    [switch]$Forced = $false
+    [switch]$Forced = $false,
+    [switch]$SkipBuild = $false
 )
 
 $ErrorActionPreference = "Stop"
@@ -37,9 +38,11 @@ if ($Forced) {
     $Notes = "[FORCED]`n$Notes"
 }
 
-Write-Host "1. Компіляція свіжого APK..." -ForegroundColor Cyan
-Set-Location "$PSScriptRoot\.."
-& .\gradlew.bat assembleDebug | Out-Null
+if (-not $SkipBuild) {
+    Write-Host "1. Компіляція свіжого APK..." -ForegroundColor Cyan
+    Set-Location "$PSScriptRoot\.."
+    cmd.exe /c "gradlew.bat assembleDebug" | Out-String | Out-Null
+}
 
 if (-not (Test-Path $ApkPath)) {
     Write-Error "Файл $ApkPath не знайдено після збірки"
