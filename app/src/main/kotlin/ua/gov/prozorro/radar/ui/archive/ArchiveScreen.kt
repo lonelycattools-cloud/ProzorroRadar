@@ -1,5 +1,8 @@
 package ua.gov.prozorro.radar.ui.archive
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -221,11 +224,25 @@ fun ArchiveScreen(
                 }
             } else {
                 items(filteredTenders, key = { it.id }) { tender ->
-                    TenderCard(
-                        tender = tender,
-                        onClick = { selectedTender = tender },
-                        onToggleFavorite = { onToggleFavorite(tender.id, tender.isFavorite) }
-                    )
+                    val isRecent = System.currentTimeMillis() - tender.foundAtTimestamp < 60000L
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateItem(
+                                fadeInSpec = tween(durationMillis = 400),
+                                placementSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                )
+                            )
+                    ) {
+                        TenderCard(
+                            tender = tender,
+                            isNewArrival = isRecent,
+                            onClick = { selectedTender = tender },
+                            onToggleFavorite = { onToggleFavorite(tender.id, tender.isFavorite) }
+                        )
+                    }
                 }
             }
 

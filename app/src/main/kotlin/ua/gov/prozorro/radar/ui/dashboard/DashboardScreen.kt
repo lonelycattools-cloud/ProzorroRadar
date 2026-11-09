@@ -1,9 +1,11 @@
 package ua.gov.prozorro.radar.ui.dashboard
 
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -137,11 +139,25 @@ fun DashboardScreen(
             }
         } else {
             items(tenders.take(8), key = { it.id }) { tender ->
-                TenderCard(
-                    tender = tender,
-                    onClick = { selectedTender = tender },
-                    onToggleFavorite = { onToggleFavorite(tender.id, tender.isFavorite) }
-                )
+                val isRecent = isScanning && (System.currentTimeMillis() - tender.foundAtTimestamp < 60000L)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateItem(
+                            fadeInSpec = tween(durationMillis = 400),
+                            placementSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            )
+                        )
+                ) {
+                    TenderCard(
+                        tender = tender,
+                        isNewArrival = isRecent,
+                        onClick = { selectedTender = tender },
+                        onToggleFavorite = { onToggleFavorite(tender.id, tender.isFavorite) }
+                    )
+                }
             }
         }
 

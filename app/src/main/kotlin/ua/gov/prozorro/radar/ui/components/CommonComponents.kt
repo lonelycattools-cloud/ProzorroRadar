@@ -3,6 +3,11 @@ package ua.gov.prozorro.radar.ui.components
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
@@ -138,10 +144,25 @@ fun MetricCard(
 @Composable
 fun TenderCard(
     tender: Tender,
+    isNewArrival: Boolean = false,
     onClick: () -> Unit,
     onToggleFavorite: () -> Unit
 ) {
     val context = LocalContext.current
+
+    val pulseAnim = if (isNewArrival) {
+        val infiniteTransition = rememberInfiniteTransition(label = "tenderPulse")
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 0.4f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(600),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "borderPulse"
+        )
+        alpha
+    } else 1f
 
     Card(
         modifier = Modifier
@@ -149,9 +170,12 @@ fun TenderCard(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isNewArrival) EmeraldPrimary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        border = androidx.compose.foundation.BorderStroke(
+            if (isNewArrival) 1.5.dp else 1.dp,
+            if (isNewArrival) EmeraldPrimary.copy(alpha = pulseAnim) else MaterialTheme.colorScheme.outline
+        )
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             // Top Row: Status badge & Favorite
@@ -160,7 +184,34 @@ fun TenderCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                StatusBadge(status = tender.status, displayStatus = tender.displayStatus)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatusBadge(status = tender.status, displayStatus = tender.displayStatus)
+                    if (isNewArrival) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = EmeraldPrimary
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Bolt,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = "НОВИЙ",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (tender.valueAmount > 0) {
