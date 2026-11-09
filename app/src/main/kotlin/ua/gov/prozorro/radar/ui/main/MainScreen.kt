@@ -63,6 +63,7 @@ fun MainScreen(
     val tenders by viewModel.tenders.collectAsStateWithLifecycle()
     val metrics by viewModel.metrics.collectAsStateWithLifecycle()
     val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
+    val scanProgress by viewModel.scanProgress.collectAsStateWithLifecycle()
     val topEntities by viewModel.topEntities.collectAsStateWithLifecycle()
     val topCpvs by viewModel.topCpvs.collectAsStateWithLifecycle()
 
@@ -135,6 +136,7 @@ fun MainScreen(
                         metrics = metrics,
                         tenders = tenders,
                         isScanning = isScanning,
+                        scanProgress = scanProgress,
                         currentCpvCodes = viewModel.preferences.cpvCodes,
                         onScanNow = { viewModel.scanNow(deepScan = false) },
                         onDeepScan = { resetCheckpoint -> viewModel.scanNow(deepScan = true, resetCheckpoint = resetCheckpoint) },

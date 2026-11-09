@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import ua.gov.prozorro.radar.data.AppPreferences
 import ua.gov.prozorro.radar.data.repository.TenderRepository
 import ua.gov.prozorro.radar.model.FeedItem
+import ua.gov.prozorro.radar.model.ScanProgress
 import ua.gov.prozorro.radar.model.Tender
 import ua.gov.prozorro.radar.service.NotificationHelper
 import java.text.SimpleDateFormat
@@ -48,6 +49,7 @@ class ProzorroScannerEngine(private val context: Context) {
     ): ScanResult = withContext(Dispatchers.IO) {
         ScanController.reset()
         repository.setScanning(true)
+        repository.updateScanProgress(ScanProgress(0, 0, "", "Ініціалізація пошуку у стрічці Prozorro…"))
         val startTime = System.currentTimeMillis()
         var totalFound = 0
         var totalExamined = 0
@@ -233,6 +235,16 @@ class ProzorroScannerEngine(private val context: Context) {
                     }
                 }
 
+                val feedDate = oldestDateModified.take(16).replace("T", " ")
+                repository.updateScanProgress(
+                    ScanProgress(
+                        examinedCount = totalExamined,
+                        foundCount = totalFound,
+                        currentFeedDate = feedDate,
+                        statusText = "Перевірено: $totalExamined торгів • Знайдено: +$totalFound"
+                    )
+                )
+
                 if (stopScan) break
 
                 val nextUri = feed.next_page?.uri
@@ -299,6 +311,7 @@ class ProzorroScannerEngine(private val context: Context) {
         } finally {
             ScanController.reset()
             repository.setScanning(false)
+            repository.updateScanProgress(null)
         }
     }
 }

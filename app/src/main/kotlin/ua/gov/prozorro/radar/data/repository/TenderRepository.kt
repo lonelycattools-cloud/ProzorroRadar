@@ -11,6 +11,7 @@ import ua.gov.prozorro.radar.data.db.ProzorroDbHelper
 import ua.gov.prozorro.radar.model.DashboardMetrics
 import ua.gov.prozorro.radar.model.ReportRow
 import ua.gov.prozorro.radar.model.ScanLog
+import ua.gov.prozorro.radar.model.ScanProgress
 import ua.gov.prozorro.radar.model.Tender
 
 class TenderRepository(context: Context) {
@@ -29,6 +30,9 @@ class TenderRepository(context: Context) {
 
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
+
+    private val _scanProgress = MutableStateFlow<ScanProgress?>(null)
+    val scanProgress: StateFlow<ScanProgress?> = _scanProgress.asStateFlow()
 
     suspend fun refreshData(
         query: String = "",
@@ -99,6 +103,10 @@ class TenderRepository(context: Context) {
 
     fun setScanning(active: Boolean) {
         _isScanning.value = active
+    }
+
+    fun updateScanProgress(progress: ScanProgress?) {
+        _scanProgress.value = progress
     }
 
     suspend fun clearAllTenders() {

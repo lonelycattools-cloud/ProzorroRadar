@@ -15,6 +15,7 @@ import ua.gov.prozorro.radar.export.ExcelExporter
 import ua.gov.prozorro.radar.model.DashboardMetrics
 import ua.gov.prozorro.radar.model.ReportResult
 import ua.gov.prozorro.radar.model.ReportRow
+import ua.gov.prozorro.radar.model.ScanProgress
 import ua.gov.prozorro.radar.model.Tender
 import ua.gov.prozorro.radar.network.AppUpdateManager
 import ua.gov.prozorro.radar.network.ProzorroScannerEngine
@@ -32,6 +33,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val tenders: StateFlow<List<Tender>> = repository.tenders
     val metrics: StateFlow<DashboardMetrics> = repository.metrics
     val isScanning: StateFlow<Boolean> = repository.isScanning
+    val scanProgress: StateFlow<ScanProgress?> = repository.scanProgress
 
     private val _topEntities = MutableStateFlow<List<ReportRow>>(emptyList())
     val topEntities: StateFlow<List<ReportRow>> = _topEntities.asStateFlow()

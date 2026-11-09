@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -64,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ua.gov.prozorro.radar.export.ExcelExporter
 import ua.gov.prozorro.radar.model.DashboardMetrics
+import ua.gov.prozorro.radar.model.ScanProgress
 import ua.gov.prozorro.radar.model.Tender
 import ua.gov.prozorro.radar.ui.components.DateScanDialog
 import ua.gov.prozorro.radar.ui.components.MetricCard
@@ -76,11 +78,13 @@ import ua.gov.prozorro.radar.ui.theme.StatusInfo
 import ua.gov.prozorro.radar.ui.theme.StatusUrgent
 import ua.gov.prozorro.radar.ui.theme.StatusWarning
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DashboardScreen(
     metrics: DashboardMetrics,
     tenders: List<Tender>,
     isScanning: Boolean,
+    scanProgress: ScanProgress? = null,
     currentCpvCodes: String,
     onScanNow: () -> Unit,
     onDeepScan: (resetCheckpoint: Boolean) -> Unit,
@@ -107,26 +111,57 @@ fun DashboardScreen(
             HeaderSection()
         }
 
-        item {
-            ScannerControlCard(
-                isScanning = isScanning,
-                metrics = metrics,
-                onScanNow = onScanNow,
-                onDeepScan = {
-                    if (metrics.lastSyncDate.isNotBlank() &&
-                        metrics.lastSyncDate != "Ще не встановлено" &&
-                        metrics.lastSyncDate != "Скинуто"
-                    ) {
-                        showDeepScanConfirmDialog = true
-                    } else {
-                        onDeepScan(true)
-                    }
-                },
-                onResetCheckpoint = { showResetCheckpointDialog = true },
-                onStopScan = onStopScan,
-                onOpenDateScanDialog = { showDateScanDialog = true },
-                onExportAll = onExportAll
-            )
+        if (isScanning) {
+            stickyHeader(key = "live_scanner_sticky") {
+                Surface(
+                    color = MaterialTheme.colorScheme.background,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                ) {
+                    ScannerControlCard(
+                        isScanning = isScanning,
+                        scanProgress = scanProgress,
+                        metrics = metrics,
+                        onScanNow = onScanNow,
+                        onDeepScan = {
+                            if (metrics.lastSyncDate.isNotBlank() &&
+                                metrics.lastSyncDate != "Ще не встановлено" &&
+                                metrics.lastSyncDate != "Скинуто"
+                            ) {
+                                showDeepScanConfirmDialog = true
+                            } else {
+                                onDeepScan(true)
+                            }
+                        },
+                        onResetCheckpoint = { showResetCheckpointDialog = true },
+                        onStopScan = onStopScan,
+                        onOpenDateScanDialog = { showDateScanDialog = true },
+                        onExportAll = onExportAll
+                    )
+                }
+            }
+        } else {
+            item(key = "scanner_control_normal") {
+                ScannerControlCard(
+                    isScanning = isScanning,
+                    scanProgress = scanProgress,
+                    metrics = metrics,
+                    onScanNow = onScanNow,
+                    onDeepScan = {
+                        if (metrics.lastSyncDate.isNotBlank() &&
+                            metrics.lastSyncDate != "Ще не встановлено" &&
+                            metrics.lastSyncDate != "Скинуто"
+                        ) {
+                            showDeepScanConfirmDialog = true
+                        } else {
+                            onDeepScan(true)
+                        }
+                    },
+                    onResetCheckpoint = { showResetCheckpointDialog = true },
+                    onStopScan = onStopScan,
+                    onOpenDateScanDialog = { showDateScanDialog = true },
+                    onExportAll = onExportAll
+                )
+            }
         }
 
         item {
@@ -334,6 +369,7 @@ private fun HeaderSection() {
 @Composable
 private fun ScannerControlCard(
     isScanning: Boolean,
+    scanProgress: ScanProgress? = null,
     metrics: DashboardMetrics,
     onScanNow: () -> Unit,
     onDeepScan: () -> Unit,
@@ -382,11 +418,37 @@ private fun ScannerControlCard(
             }
 
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = metrics.lastScanStatus,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (isScanning) {
+                val examined = scanProgress?.examinedCount ?: 0
+                val found = scanProgress?.foundCount ?: 0
+                val feedDate = scanProgress?.currentFeedDate.orEmpty()
+
+                val displayText = if (examined == 0 && found == 0 && !scanProgress?.statusText.isNullOrBlank()) {
+                    scanProgress.statusText
+                } else {
+                    "Перевірено: $examined торгів • Знайдено: +$found"
+                }
+
+                Text(
+                    text = displayText,
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                    color = EmeraldPrimary
+                )
+                if (feedDate.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Глибина: $feedDate",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Text(
+                    text = metrics.lastScanStatus,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
 
@@ -412,8 +474,13 @@ private fun ScannerControlCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
+                    val checkpointText = if (isScanning && scanProgress != null && scanProgress.currentFeedDate.isNotBlank()) {
+                        "Поточна стрічка: ${scanProgress.currentFeedDate}"
+                    } else {
+                        "Точка зупинки: ${metrics.lastSyncDate}"
+                    }
                     Text(
-                        text = "Точка зупинки: ${metrics.lastSyncDate}",
+                        text = checkpointText,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
@@ -451,10 +518,17 @@ private fun ScannerControlCard(
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(10.dp))
+                        val liveText = if (scanProgress != null && scanProgress.statusText.isNotBlank()) {
+                            scanProgress.statusText
+                        } else {
+                            "Пошук активних торгів…"
+                        }
                         Text(
-                            text = "Пошук активних торгів…",
+                            text = liveText,
                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                            color = EmeraldPrimary
+                            color = EmeraldPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
