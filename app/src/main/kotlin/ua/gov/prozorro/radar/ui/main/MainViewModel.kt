@@ -76,8 +76,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun scanFromDate(startDateIso: String) {
+    fun scanFromDate(startDateIso: String, cpvCodes: String? = null) {
         viewModelScope.launch {
+            if (!cpvCodes.isNullOrBlank()) {
+                preferences.cpvCodes = cpvCodes
+            }
             val res = scannerEngine.scanNow(startDateIso)
             repository.refreshData()
             _topEntities.value = repository.getTopProcuringEntities()

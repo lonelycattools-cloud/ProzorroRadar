@@ -130,8 +130,9 @@ fun MainScreen(
                         metrics = metrics,
                         tenders = tenders,
                         isScanning = isScanning,
+                        currentCpvCodes = viewModel.preferences.cpvCodes,
                         onScanNow = { viewModel.scanNow() },
-                        onScanFromDate = { dateIso -> viewModel.scanFromDate(dateIso) },
+                        onScanFromDate = { dateIso, cpvs -> viewModel.scanFromDate(dateIso, cpvs) },
                         onToggleFavorite = { id, curr -> viewModel.toggleFavorite(id, curr) },
                         onNavigateToArchive = { currentTab = AppTab.ARCHIVE },
                         onExportAll = { viewModel.exportAllTenders(context) }

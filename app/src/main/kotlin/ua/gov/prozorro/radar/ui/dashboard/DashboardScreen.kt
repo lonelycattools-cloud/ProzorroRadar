@@ -73,8 +73,9 @@ fun DashboardScreen(
     metrics: DashboardMetrics,
     tenders: List<Tender>,
     isScanning: Boolean,
+    currentCpvCodes: String,
     onScanNow: () -> Unit,
-    onScanFromDate: (String) -> Unit,
+    onScanFromDate: (String, String) -> Unit,
     onToggleFavorite: (String, Boolean) -> Unit,
     onNavigateToArchive: () -> Unit,
     onExportAll: () -> Unit
@@ -160,10 +161,11 @@ fun DashboardScreen(
     if (showDateScanDialog) {
         DateScanDialog(
             currentCheckpointDate = metrics.lastSyncDate,
+            initialCpvCodes = currentCpvCodes,
             onDismiss = { showDateScanDialog = false },
-            onStartScan = { isoDate ->
+            onStartScan = { isoDate, selectedCpvs ->
                 showDateScanDialog = false
-                onScanFromDate(isoDate)
+                onScanFromDate(isoDate, selectedCpvs)
             }
         )
     }
