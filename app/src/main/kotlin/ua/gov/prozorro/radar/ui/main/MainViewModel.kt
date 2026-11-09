@@ -89,6 +89,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun clearAllTenders() {
+        viewModelScope.launch {
+            repository.clearAllTenders()
+            _topEntities.value = emptyList()
+            _topCpvs.value = emptyList()
+            Toast.makeText(getApplication(), "Базу даних торгів очищено", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     fun resetSyncOffset() {
         viewModelScope.launch {
             preferences.resetSyncOffset()

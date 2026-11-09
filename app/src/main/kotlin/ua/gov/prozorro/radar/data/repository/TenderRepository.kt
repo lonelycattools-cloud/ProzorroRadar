@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import ua.gov.prozorro.radar.data.AppPreferences
 import ua.gov.prozorro.radar.data.db.ProzorroDbHelper
 import ua.gov.prozorro.radar.model.DashboardMetrics
+import ua.gov.prozorro.radar.model.ReportRow
 import ua.gov.prozorro.radar.model.ScanLog
 import ua.gov.prozorro.radar.model.Tender
 
@@ -29,18 +30,24 @@ class TenderRepository(context: Context) {
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
-    suspend fun refreshData(query: String = "", statusFilter: String = "", favoritesOnly: Boolean = false) {
+    suspend fun refreshData(
+        query: String = "",
+        statusFilter: String = "",
+        favoritesOnly: Boolean = false,
+        filterByActiveCpvs: Boolean = true
+    ) {
         withContext(Dispatchers.IO) {
-            val list = dbHelper.getAllTenders(query, statusFilter, favoritesOnly)
+            val cpvPrefixes = if (filterByActiveCpvs) preferences.getCleanCpvPrefixes() else emptyList()
+            val list = dbHelper.getAllTenders(query, statusFilter, favoritesOnly, cpvPrefixes)
             _tenders.value = list
-            refreshMetrics()
+            refreshMetrics(cpvPrefixes)
             refreshLogs()
         }
     }
 
-    suspend fun refreshMetrics() {
+    suspend fun refreshMetrics(cpvPrefixes: List<String> = preferences.getCleanCpvPrefixes()) {
         withContext(Dispatchers.IO) {
-            val m = dbHelper.getMetrics().copy(
+            val m = dbHelper.getMetrics(cpvPrefixes).copy(
                 lastScanTime = preferences.lastScanTimestamp,
                 lastScanStatus = preferences.lastScanStatus,
                 lastSyncDate = preferences.lastSyncDate
@@ -77,9 +84,9 @@ class TenderRepository(context: Context) {
         }
     }
 
-    suspend fun getExistingIds(): Set<String> {
+    suspend fun getExistingIds(cpvPrefixes: List<String> = emptyList()): Set<String> {
         return withContext(Dispatchers.IO) {
-            dbHelper.getExistingIds()
+            dbHelper.getExistingIds(cpvPrefixes)
         }
     }
 
@@ -94,13 +101,22 @@ class TenderRepository(context: Context) {
         _isScanning.value = active
     }
 
-    // Analytics reports
-    suspend fun getTopProcuringEntities(limit: Int = 10) = withContext(Dispatchers.IO) {
-        dbHelper.getTopProcuringEntities(limit)
+    suspend fun clearAllTenders() {
+        withContext(Dispatchers.IO) {
+            dbHelper.clearAllTenders()
+            refreshData()
+        }
     }
 
-    suspend fun getTopCpvCategories(limit: Int = 10) = withContext(Dispatchers.IO) {
-        dbHelper.getTopCpvCategories(limit)
+    // Analytics reports
+    suspend fun getTopProcuringEntities(limit: Int = 10): List<ReportRow> = withContext(Dispatchers.IO) {
+        val cpvs = preferences.getCleanCpvPrefixes()
+        dbHelper.getTopProcuringEntities(limit, cpvs)
+    }
+
+    suspend fun getTopCpvCategories(limit: Int = 10): List<ReportRow> = withContext(Dispatchers.IO) {
+        val cpvs = preferences.getCleanCpvPrefixes()
+        dbHelper.getTopCpvCategories(limit, cpvs)
     }
 
     suspend fun getTendersByEdrpou(edrpou: String) = withContext(Dispatchers.IO) {

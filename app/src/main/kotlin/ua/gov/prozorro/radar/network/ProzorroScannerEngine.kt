@@ -31,77 +31,113 @@ class ProzorroScannerEngine(private val context: Context) {
         var totalExamined = 0
 
         try {
-            val existingIds = repository.getExistingIds().toMutableSet()
             val cpvPrefixes = preferences.getCleanCpvPrefixes()
             val searchStatus = preferences.searchStatus.trim()
 
-            // Determine synchronization mode and initial URL:
+            // Existing IDs in SQLite for the CURRENT CPV categories
+            val existingIds = repository.getExistingIds(cpvPrefixes).toMutableSet()
+
             val isCustomStart = !startDateIso.isNullOrBlank()
-            val savedOffset = preferences.lastSyncOffset
+            // History mode: if we have fewer than 25 tenders for this category in DB
+            val isHistoryMode = existingIds.size < 25
 
-            var url: String
-            val isForwardSync: Boolean
-
-            if (isCustomStart) {
-                // User explicitly requested starting from a specific date forward to now
-                url = "${ProzorroApiService.BASE_API_URL}?offset=${startDateIso}&limit=50&opt_fields=id,status,dateModified"
-                isForwardSync = true
-                val displayStart = startDateIso.take(16).replace("T", " ")
-                repository.addLog("Старт з дати: $displayStart", 0, "Сканування до теперішнього часу")
-            } else if (savedOffset.isNotBlank()) {
-                // Resume from previously saved checkpoint!
-                url = "${ProzorroApiService.BASE_API_URL}?offset=$savedOffset&limit=50&opt_fields=id,status,dateModified"
-                isForwardSync = true
-                repository.addLog("Продовження з точки зупинки", 0, "Точка: ${preferences.lastSyncDate}")
+            // Stop threshold on duplicates of matching category tenders
+            val currentStopThreshold = if (existingIds.isNotEmpty()) {
+                minOf(preferences.stopOnDuplicates, existingIds.size)
             } else {
-                // First run without offset: descending feed
-                url = "${ProzorroApiService.BASE_API_URL}?descending=1&limit=50&opt_fields=id,status,dateModified"
-                isForwardSync = false
-                repository.addLog("Початкове сканування (Свіжа стрічка)", 0, "База: ${existingIds.size} торгів")
+                999999
             }
 
-            var stopScan = false
-            var duplicatesStreak = 0
-            val newlyDiscoveredTenders = mutableListOf<Tender>()
-            var lastCheckpointOffset = savedOffset
-            var lastCheckpointDate = preferences.lastSyncDate
+            // Target number of tenders to collect in History mode
+            val historyTargetCount = 30
 
+            // Prozorro descending feed URL
+            var url = "${ProzorroApiService.BASE_API_URL}?descending=1&limit=50&opt_fields=id,status,dateModified"
+
+            val modeName = when {
+                isCustomStart -> "З дати: ${startDateIso.take(10)}"
+                isHistoryMode -> "ПОШУК ІСТОРІЇ (База: ${existingIds.size})"
+                else -> "МОНІТОРИНГ СТРІЧКИ (База: ${existingIds.size})"
+            }
+
+            repository.addLog(
+                "Старт пошуку ($modeName)",
+                0,
+                "Категорії: ${cpvPrefixes.joinToString(", ").ifEmpty { "Всі" }}"
+            )
+
+            var stopScan = false
+            var matchingDuplicatesStreak = 0
+            val newlyDiscoveredTenders = mutableListOf<Tender>()
+
+            var newestDateModified = ""
+            var oldestDateModified = ""
+
+            // Generous page limits:
+            // Custom date: up to 300 pages (15,000 items)
+            // History mode: up to 150 pages (7,500 items) or until 30 matching tenders found
+            // Monitor mode: up to 100 pages (5,000 items) or until duplicate threshold reached
+            val maxPages = if (isCustomStart) 300 else if (isHistoryMode) 150 else 100
             var pagesProcessed = 0
-            val maxPages = if (isCustomStart) 100 else 40 // prevent infinite loops on very old dates
 
             while (!stopScan && pagesProcessed < maxPages) {
                 pagesProcessed++
                 val feed = apiService.fetchFeed(url)
                 if (feed == null || feed.data.isEmpty()) {
-                    // Feed finished (reached the present moment or empty)
                     break
                 }
 
                 val items = feed.data
                 totalExamined += items.size
-                val candidates = mutableListOf<FeedItem>()
+
+                if (newestDateModified.isEmpty() && items.isNotEmpty()) {
+                    newestDateModified = items.first().dateModified ?: ""
+                }
+                if (items.isNotEmpty()) {
+                    oldestDateModified = items.last().dateModified ?: ""
+                }
+
+                // Check custom start date limit in descending feed:
+                if (isCustomStart && items.isNotEmpty()) {
+                    val lastDate = items.last().dateModified ?: ""
+                    if (lastDate.isNotBlank() && lastDate <= startDateIso) {
+                        stopScan = true
+                    }
+                }
+
+                val candidatesToFetch = mutableListOf<FeedItem>()
 
                 for (item in items) {
+                    // Check if this tender is ALREADY in our database for this CPV category:
                     if (existingIds.contains(item.id)) {
-                        if (!isForwardSync) {
-                            duplicatesStreak++
-                            if (duplicatesStreak >= preferences.stopOnDuplicates) {
+                        matchingDuplicatesStreak++
+                        if (!isHistoryMode && !isCustomStart) {
+                            if (matchingDuplicatesStreak >= currentStopThreshold) {
                                 stopScan = true
                                 break
                             }
                         }
-                    } else {
-                        duplicatesStreak = 0
-                        candidates.add(item)
+                        continue
                     }
+
+                    // Pre-filter by status directly from feed item if specified
+                    if (searchStatus.isNotBlank() && !searchStatus.equals("all", ignoreCase = true)) {
+                        val st = item.status
+                        if (!st.isNullOrBlank() && st != searchStatus) {
+                            // Tender is complete, awarded, cancelled, etc. -> skip details fetch!
+                            continue
+                        }
+                    }
+
+                    candidatesToFetch.add(item)
                 }
 
-                if (stopScan && candidates.isEmpty()) break
+                if (stopScan && candidatesToFetch.isEmpty()) break
 
-                // Concurrently fetch candidate details (limit to 12 workers)
-                if (candidates.isNotEmpty()) {
-                    val semaphore = Semaphore(12)
-                    val deferredList = candidates.map { candidate ->
+                // Concurrently fetch candidate details (20 parallel coroutines)
+                if (candidatesToFetch.isNotEmpty()) {
+                    val semaphore = Semaphore(20)
+                    val deferredList = candidatesToFetch.map { candidate ->
                         async {
                             semaphore.withPermit {
                                 apiService.fetchTenderDetail(candidate.id)
@@ -111,27 +147,37 @@ class ProzorroScannerEngine(private val context: Context) {
 
                     val fullTenders = deferredList.awaitAll().filterNotNull()
 
-                    // Filter matching tenders
+                    // Filter matching tenders using status & CPV prefixes
                     val validRows = mutableListOf<Tender>()
                     for (tender in fullTenders) {
-                        if (existingIds.contains(tender.id)) continue
-
-                        // Check status
-                        if (searchStatus.isNotEmpty() && tender.status != searchStatus) {
+                        if (existingIds.contains(tender.id)) {
+                            matchingDuplicatesStreak++
+                            if (!isHistoryMode && !isCustomStart && matchingDuplicatesStreak >= currentStopThreshold) {
+                                stopScan = true
+                            }
                             continue
                         }
 
-                        // Check CPV
+                        // Check status again
+                        if (searchStatus.isNotBlank() && !searchStatus.equals("all", ignoreCase = true) && tender.status != searchStatus) {
+                            continue
+                        }
+
+                        // Check CPV prefixes
                         if (cpvPrefixes.isNotEmpty()) {
-                            val tenderCpvs = tender.cpvCodes.split(",").map { it.trim() }
+                            val tenderCpvs = tender.cpvCodes.split(",").map { it.trim().split("-")[0].trim() }
                             val match = tenderCpvs.any { tc ->
                                 cpvPrefixes.any { prefix -> tc.startsWith(prefix) }
                             }
                             if (!match) continue
                         }
 
+                        // Tender matches our criteria!
+                        // Fresh matching tender resets the duplicate streak
+                        matchingDuplicatesStreak = 0
+
                         val prepared = tender.copy(
-                            emailStatus = if (isCustomStart) "History" else "Pending",
+                            emailStatus = if (isCustomStart || isHistoryMode) "History" else "Pending",
                             foundAtTimestamp = System.currentTimeMillis()
                         )
                         validRows.add(prepared)
@@ -145,17 +191,10 @@ class ProzorroScannerEngine(private val context: Context) {
                     }
                 }
 
-                // Update checkpoint offset
-                val nextOffset = feed.next_page?.offset
-                if (!nextOffset.isNullOrBlank()) {
-                    lastCheckpointOffset = nextOffset
-                }
-
-                if (items.isNotEmpty()) {
-                    val latestDate = items.lastOrNull()?.dateModified ?: items.first().dateModified
-                    if (!latestDate.isNullOrBlank()) {
-                        lastCheckpointDate = latestDate.take(16).replace("T", " ")
-                    }
+                // In history mode without custom date, stop once we've collected a solid batch of tenders
+                if (isHistoryMode && !isCustomStart && totalFound >= historyTargetCount) {
+                    stopScan = true
+                    break
                 }
 
                 if (stopScan) break
@@ -168,47 +207,50 @@ class ProzorroScannerEngine(private val context: Context) {
                 }
             }
 
-            // Save new stopping point (Offset & Human date)
-            if (lastCheckpointOffset.isNotBlank()) {
-                preferences.lastSyncOffset = lastCheckpointOffset
-            }
-            if (lastCheckpointDate.isNotBlank()) {
-                preferences.lastSyncDate = lastCheckpointDate
-            }
-
             val timeTakenSec = (System.currentTimeMillis() - startTime) / 1000
             val timeStr = SimpleDateFormat("dd.MM HH:mm", Locale.getDefault()).format(Date())
+
+            val formattedDateRange = if (newestDateModified.isNotEmpty()) {
+                val start = newestDateModified.take(16).replace("T", " ")
+                val end = oldestDateModified.take(16).replace("T", " ")
+                "$start → $end"
+            } else {
+                "Свіжа стрічка"
+            }
+
             preferences.lastScanTimestamp = System.currentTimeMillis()
-            preferences.lastScanStatus = "Оновлено $timeStr (Точка: $lastCheckpointDate, знайдено: $totalFound)"
+            preferences.lastScanStatus = "Оновлено $timeStr: знайдено +$totalFound (перевірено $totalExamined торгів)"
+            preferences.lastSyncDate = formattedDateRange
 
             repository.addLog(
-                "Сканування завершено",
+                "Сканування завершено ($modeName)",
                 totalFound,
-                "Перевірено: $totalExamined, Нових: $totalFound ($timeTakenSec сек). Точка: $lastCheckpointDate"
+                "Перевірено: $totalExamined, Нових: $totalFound ($timeTakenSec сек). Діапазон: $formattedDateRange"
             )
 
-            // Notifications and email for newly found tenders
-            if (newlyDiscoveredTenders.isNotEmpty() && !isCustomStart) {
+            // Notifications and email for newly found tenders (only in live monitor mode)
+            if (newlyDiscoveredTenders.isNotEmpty() && !isCustomStart && !isHistoryMode) {
                 notificationHelper.showNewTendersNotification(newlyDiscoveredTenders)
                 emailSender.sendTendersDigest(newlyDiscoveredTenders)
             }
 
-            repository.refreshMetrics()
+            repository.refreshData()
             return@withContext ScanResult(
                 success = true,
                 newCount = totalFound,
                 examinedCount = totalExamined,
-                message = "Успішно. Знайдено $totalFound торгів. Точка зупинки: $lastCheckpointDate"
+                message = "Знайдено +$totalFound торгів (перевірено $totalExamined). Діапазон: $formattedDateRange"
             )
         } catch (e: Exception) {
             e.printStackTrace()
+            val msg = "Помилка: ${e.localizedMessage ?: "Невідома помилка"}"
             preferences.lastScanStatus = "Помилка сканування: ${e.message}"
-            repository.addLog("Помилка сканування", 0, e.message ?: "Невідома помилка")
+            repository.addLog("Помилка сканування", 0, msg)
             return@withContext ScanResult(
                 success = false,
                 newCount = 0,
                 examinedCount = totalExamined,
-                message = e.message ?: "Помилка"
+                message = msg
             )
         } finally {
             repository.setScanning(false)

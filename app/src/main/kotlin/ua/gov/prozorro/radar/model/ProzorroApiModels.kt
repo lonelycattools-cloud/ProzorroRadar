@@ -56,9 +56,17 @@ object TenderParser {
         val mainClass = data["classification"]?.jsonObject
         mainClass?.get("id")?.jsonPrimitive?.contentOrNull?.let { cpvSet.add(it) }
 
+        data["additionalClassifications"]?.jsonArray?.forEach { acEl ->
+            acEl.jsonObject["id"]?.jsonPrimitive?.contentOrNull?.let { cpvSet.add(it) }
+        }
+
         data["items"]?.jsonArray?.forEach { itemEl ->
-            itemEl.jsonObject["classification"]?.jsonObject?.get("id")?.jsonPrimitive?.contentOrNull?.let {
+            val itemObj = itemEl.jsonObject
+            itemObj["classification"]?.jsonObject?.get("id")?.jsonPrimitive?.contentOrNull?.let {
                 cpvSet.add(it)
+            }
+            itemObj["additionalClassifications"]?.jsonArray?.forEach { acEl ->
+                acEl.jsonObject["id"]?.jsonPrimitive?.contentOrNull?.let { cpvSet.add(it) }
             }
         }
 

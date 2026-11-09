@@ -99,7 +99,12 @@ fun MainScreen(
                     val isSelected = currentTab == tab
                     NavigationBarItem(
                         selected = isSelected,
-                        onClick = { currentTab = tab },
+                        onClick = { 
+                            currentTab = tab 
+                            if (tab == AppTab.DASHBOARD || tab == AppTab.ARCHIVE || tab == AppTab.REPORTS) {
+                                viewModel.loadData()
+                            }
+                        },
                         icon = {
                             Icon(
                                 imageVector = tab.icon,
@@ -158,7 +163,9 @@ fun MainScreen(
                         preferences = viewModel.preferences,
                         isCheckingUpdate = isCheckingUpdate,
                         onCheckUpdate = { viewModel.checkForUpdate(isManual = true) },
-                        onResetSyncOffset = { viewModel.resetSyncOffset() }
+                        onResetSyncOffset = { viewModel.resetSyncOffset() },
+                        onCategoriesChanged = { viewModel.loadData() },
+                        onClearDatabase = { viewModel.clearAllTenders() }
                     )
                 }
                 AppTab.HELP -> {

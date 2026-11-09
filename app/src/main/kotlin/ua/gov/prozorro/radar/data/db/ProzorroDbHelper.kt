@@ -63,6 +63,11 @@ class ProzorroDbHelper(context: Context) :
 
     // --- Tenders Operations ---
 
+    fun clearAllTenders() {
+        val db = writableDatabase
+        db.delete(TABLE_TENDERS, null, null)
+    }
+
     fun insertOrUpdateTender(tender: Tender): Boolean {
         val db = writableDatabase
         val cv = ContentValues().apply {
@@ -91,6 +96,7 @@ class ProzorroDbHelper(context: Context) :
         query: String = "",
         statusFilter: String = "",
         favoritesOnly: Boolean = false,
+        cpvPrefixes: List<String> = emptyList(),
         limit: Int = 1000
     ): List<Tender> {
         val db = readableDatabase
@@ -115,6 +121,12 @@ class ProzorroDbHelper(context: Context) :
             whereClauses.add("$COL_IS_FAVORITE = 1")
         }
 
+        if (cpvPrefixes.isNotEmpty()) {
+            val cpvClauses = cpvPrefixes.map { "$COL_CPV_CODES LIKE ?" }
+            whereClauses.add("(${cpvClauses.joinToString(" OR ")})")
+            cpvPrefixes.forEach { args.add("%$it%") }
+        }
+
         val whereStr = if (whereClauses.isNotEmpty()) whereClauses.joinToString(" AND ") else null
         val cursor = db.query(
             TABLE_TENDERS,
@@ -136,10 +148,18 @@ class ProzorroDbHelper(context: Context) :
         return list
     }
 
-    fun getExistingIds(): Set<String> {
+    fun getExistingIds(cpvPrefixes: List<String> = emptyList()): Set<String> {
         val db = readableDatabase
         val set = mutableSetOf<String>()
-        val cursor = db.query(TABLE_TENDERS, arrayOf(COL_ID), null, null, null, null, null)
+        val whereClause = if (cpvPrefixes.isNotEmpty()) {
+            val clauses = cpvPrefixes.map { "$COL_CPV_CODES LIKE ?" }
+            clauses.joinToString(" OR ")
+        } else null
+        val args = if (cpvPrefixes.isNotEmpty()) {
+            cpvPrefixes.map { "%$it%" }.toTypedArray()
+        } else null
+
+        val cursor = db.query(TABLE_TENDERS, arrayOf(COL_ID), whereClause, args, null, null, null)
         cursor.use { c ->
             while (c.moveToNext()) {
                 set.add(c.getString(0))
@@ -164,7 +184,7 @@ class ProzorroDbHelper(context: Context) :
         db.update(TABLE_TENDERS, cv, "$COL_ID = ?", arrayOf(id))
     }
 
-    fun getMetrics(): DashboardMetrics {
+    fun getMetrics(cpvPrefixes: List<String> = emptyList()): DashboardMetrics {
         val db = readableDatabase
         var total = 0
         var totalSum = 0.0
@@ -174,17 +194,54 @@ class ProzorroDbHelper(context: Context) :
         val now = System.currentTimeMillis()
         val oneDayAgo = now - 24 * 60 * 60 * 1000L
 
-        val cursor = db.rawQuery(
-            """
-            SELECT 
-                COUNT(*), 
-                COALESCE(SUM($COL_VALUE_AMOUNT), 0),
-                COUNT(CASE WHEN $COL_STATUS = 'active.tendering' THEN 1 END),
-                COUNT(CASE WHEN $COL_FOUND_AT >= ? THEN 1 END)
-            FROM $TABLE_TENDERS
-            """.trimIndent(),
-            arrayOf(oneDayAgo.toString())
-        )
+        val cpvFilterSql = if (cpvPrefixes.isNotEmpty()) {
+            val clauses = cpvPrefixes.joinToString(" OR ") { "$COL_CPV_CODES LIKE ?" }
+            "AND ($clauses)"
+        } else ""
+
+        val rawArgs = mutableListOf<String>()
+        rawArgs.add(oneDayAgo.toString())
+        if (cpvPrefixes.isNotEmpty()) {
+            cpvPrefixes.forEach { rawArgs.add("%$it%") }
+        }
+
+        val baseQuery = if (cpvPrefixes.isNotEmpty()) {
+            val clauses = cpvPrefixes.joinToString(" OR ") { "$COL_CPV_CODES LIKE ?" }
+            "WHERE ($clauses)"
+        } else ""
+
+        val cursor = if (cpvPrefixes.isEmpty()) {
+            db.rawQuery(
+                """
+                SELECT 
+                    COUNT(*), 
+                    COALESCE(SUM($COL_VALUE_AMOUNT), 0),
+                    COUNT(CASE WHEN $COL_STATUS = 'active.tendering' THEN 1 END),
+                    COUNT(CASE WHEN $COL_FOUND_AT >= ? THEN 1 END)
+                FROM $TABLE_TENDERS
+                """.trimIndent(),
+                arrayOf(oneDayAgo.toString())
+            )
+        } else {
+            val argsList = mutableListOf<String>()
+            cpvPrefixes.forEach { argsList.add("%$it%") }
+            argsList.add(oneDayAgo.toString())
+            cpvPrefixes.forEach { argsList.add("%$it%") }
+
+            val cpvOr = cpvPrefixes.joinToString(" OR ") { "$COL_CPV_CODES LIKE ?" }
+            db.rawQuery(
+                """
+                SELECT 
+                    COUNT(*), 
+                    COALESCE(SUM($COL_VALUE_AMOUNT), 0),
+                    COUNT(CASE WHEN $COL_STATUS = 'active.tendering' THEN 1 END),
+                    COUNT(CASE WHEN $COL_FOUND_AT >= ? AND ($cpvOr) THEN 1 END)
+                FROM $TABLE_TENDERS
+                WHERE ($cpvOr)
+                """.trimIndent(),
+                argsList.toTypedArray()
+            )
+        }
 
         cursor.use { c ->
             if (c.moveToFirst()) {
@@ -196,13 +253,26 @@ class ProzorroDbHelper(context: Context) :
         }
 
         // Urgent deadlines count
-        val urgentCursor = db.rawQuery(
-            """
-            SELECT COUNT(*) FROM $TABLE_TENDERS 
-            WHERE $COL_DEADLINE != '-' AND $COL_STATUS = 'active.tendering'
-            """.trimIndent(),
-            null
-        )
+        val urgentCursor = if (cpvPrefixes.isEmpty()) {
+            db.rawQuery(
+                """
+                SELECT COUNT(*) FROM $TABLE_TENDERS 
+                WHERE $COL_DEADLINE != '-' AND $COL_STATUS = 'active.tendering'
+                """.trimIndent(),
+                null
+            )
+        } else {
+            val cpvOr = cpvPrefixes.joinToString(" OR ") { "$COL_CPV_CODES LIKE ?" }
+            val args = cpvPrefixes.map { "%$it%" }.toTypedArray()
+            db.rawQuery(
+                """
+                SELECT COUNT(*) FROM $TABLE_TENDERS 
+                WHERE $COL_DEADLINE != '-' AND $COL_STATUS = 'active.tendering' AND ($cpvOr)
+                """.trimIndent(),
+                args
+            )
+        }
+
         var urgentCount = 0
         urgentCursor.use { c ->
             if (c.moveToFirst()) {
@@ -221,18 +291,29 @@ class ProzorroDbHelper(context: Context) :
 
     // --- Analytics / Reports ---
 
-    fun getTopProcuringEntities(limit: Int = 10): List<ReportRow> {
+    fun getTopProcuringEntities(limit: Int = 10, cpvPrefixes: List<String> = emptyList()): List<ReportRow> {
         val db = readableDatabase
         val list = mutableListOf<ReportRow>()
+        val whereClause = if (cpvPrefixes.isNotEmpty()) {
+            val or = cpvPrefixes.joinToString(" OR ") { "$COL_CPV_CODES LIKE ?" }
+            "WHERE ($or)"
+        } else ""
+        val args = mutableListOf<String>()
+        if (cpvPrefixes.isNotEmpty()) {
+            cpvPrefixes.forEach { args.add("%$it%") }
+        }
+        args.add(limit.toString())
+
         val cursor = db.rawQuery(
             """
             SELECT $COL_ENTITY_NAME, $COL_ENTITY_EDRPOU, COUNT(*) as cnt, SUM($COL_VALUE_AMOUNT) as sm
             FROM $TABLE_TENDERS
+            $whereClause
             GROUP BY $COL_ENTITY_NAME
             ORDER BY sm DESC
             LIMIT ?
             """.trimIndent(),
-            arrayOf(limit.toString())
+            args.toTypedArray()
         )
         cursor.use { c ->
             while (c.moveToNext()) {
@@ -254,19 +335,29 @@ class ProzorroDbHelper(context: Context) :
         return list
     }
 
-    fun getTopCpvCategories(limit: Int = 10): List<ReportRow> {
+    fun getTopCpvCategories(limit: Int = 10, cpvPrefixes: List<String> = emptyList()): List<ReportRow> {
         val db = readableDatabase
         val list = mutableListOf<ReportRow>()
+        val whereClause = if (cpvPrefixes.isNotEmpty()) {
+            val or = cpvPrefixes.joinToString(" OR ") { "$COL_CPV_CODES LIKE ?" }
+            "WHERE $COL_CPV_CODES != '' AND ($or)"
+        } else "WHERE $COL_CPV_CODES != ''"
+        val args = mutableListOf<String>()
+        if (cpvPrefixes.isNotEmpty()) {
+            cpvPrefixes.forEach { args.add("%$it%") }
+        }
+        args.add(limit.toString())
+
         val cursor = db.rawQuery(
             """
             SELECT $COL_CPV_CODES, COUNT(*) as cnt, SUM($COL_VALUE_AMOUNT) as sm
             FROM $TABLE_TENDERS
-            WHERE $COL_CPV_CODES != ''
+            $whereClause
             GROUP BY $COL_CPV_CODES
             ORDER BY cnt DESC
             LIMIT ?
             """.trimIndent(),
-            arrayOf(limit.toString())
+            args.toTypedArray()
         )
         cursor.use { c ->
             while (c.moveToNext()) {

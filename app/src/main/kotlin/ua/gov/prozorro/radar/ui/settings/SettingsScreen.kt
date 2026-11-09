@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Notifications
@@ -41,6 +42,7 @@ import androidx.compose.material.icons.filled.SystemUpdate
 import ua.gov.prozorro.radar.BuildConfig
 import ua.gov.prozorro.radar.data.CpvCatalog
 import ua.gov.prozorro.radar.ui.components.CpvPickerDialog
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -85,7 +87,9 @@ fun SettingsScreen(
     preferences: AppPreferences,
     isCheckingUpdate: Boolean = false,
     onCheckUpdate: () -> Unit = {},
-    onResetSyncOffset: () -> Unit = {}
+    onResetSyncOffset: () -> Unit = {},
+    onCategoriesChanged: () -> Unit = {},
+    onClearDatabase: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -121,6 +125,7 @@ fun SettingsScreen(
     // CPV Catalog & Picker
     val cpvCatalog = remember { CpvCatalog.getInstance(context) }
     var showCpvPickerDialog by remember { mutableStateOf(false) }
+    var showClearDbDialog by remember { mutableStateOf(false) }
     var resolvedCategoryNames by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
 
     LaunchedEffect(cpvCodes) {
@@ -325,6 +330,7 @@ fun SettingsScreen(
                                             val newStr = updated.joinToString(", ")
                                             cpvCodes = newStr
                                             preferences.cpvCodes = newStr
+                                            onCategoriesChanged()
                                         },
                                         modifier = Modifier.size(28.dp)
                                     ) {
@@ -392,6 +398,7 @@ fun SettingsScreen(
                                             val newCpv = (cleanList + code).joinToString(", ")
                                             cpvCodes = newCpv
                                             preferences.cpvCodes = newCpv
+                                            onCategoriesChanged()
                                         }
                                     }
                                 )
@@ -413,6 +420,7 @@ fun SettingsScreen(
                     onValueChange = {
                         cpvCodes = it
                         preferences.cpvCodes = it
+                        onCategoriesChanged()
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp),
@@ -423,6 +431,19 @@ fun SettingsScreen(
                     ),
                     placeholder = { Text("18100000, 30230000, 45000000") }
                 )
+
+                Spacer(modifier = Modifier.height(14.dp))
+                OutlinedButton(
+                    onClick = { showClearDbDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Очистити локальну базу торгів", fontWeight = FontWeight.SemiBold)
+                }
             }
         }
 
@@ -813,6 +834,30 @@ fun SettingsScreen(
         }
     }
 
+    if (showClearDbDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearDbDialog = false },
+            title = { Text("Очистити базу торгів?") },
+            text = { Text("Всі збережені тендери буде видалено з пам'яті додатка. Нові торги будуть автоматично завантажені при наступному оновленні.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showClearDbDialog = false
+                        onClearDatabase()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Видалити", color = MaterialTheme.colorScheme.onError)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDbDialog = false }) {
+                    Text("Скасувати")
+                }
+            }
+        )
+    }
+
     if (showCpvPickerDialog) {
         val currentList = cpvCodes.split(",").map { it.trim().split("-")[0].trim() }.filter { it.isNotEmpty() }
         CpvPickerDialog(
@@ -823,6 +868,7 @@ fun SettingsScreen(
                 cpvCodes = newStr
                 preferences.cpvCodes = newStr
                 showCpvPickerDialog = false
+                onCategoriesChanged()
             }
         )
     }

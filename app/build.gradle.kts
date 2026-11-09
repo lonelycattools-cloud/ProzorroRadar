@@ -11,8 +11,8 @@ android {
     applicationId = "ua.gov.prozorro.radar"
     minSdk = 26
     targetSdk = 36
-    versionCode = 4
-    versionName = "1.0.3"
+    versionCode = 6
+    versionName = "1.0.5"
   }
 
   buildTypes {
