@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,9 +30,11 @@ import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Today
+import androidx.compose.material.icons.filled.TravelExplore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -40,6 +43,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -77,6 +81,8 @@ fun DashboardScreen(
     isScanning: Boolean,
     currentCpvCodes: String,
     onScanNow: () -> Unit,
+    onDeepScan: () -> Unit,
+    onStopScan: () -> Unit,
     onScanFromDate: (String, String) -> Unit,
     onToggleFavorite: (String, Boolean) -> Unit,
     onNavigateToArchive: () -> Unit,
@@ -101,6 +107,8 @@ fun DashboardScreen(
                 isScanning = isScanning,
                 metrics = metrics,
                 onScanNow = onScanNow,
+                onDeepScan = onDeepScan,
+                onStopScan = onStopScan,
                 onOpenDateScanDialog = { showDateScanDialog = true },
                 onExportAll = onExportAll
             )
@@ -232,6 +240,8 @@ private fun ScannerControlCard(
     isScanning: Boolean,
     metrics: DashboardMetrics,
     onScanNow: () -> Unit,
+    onDeepScan: () -> Unit,
+    onStopScan: () -> Unit,
     onOpenDateScanDialog: () -> Unit,
     onExportAll: () -> Unit
 ) {
@@ -308,53 +318,136 @@ private fun ScannerControlCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (isScanning) {
+                // Live scanning active row with single-color PAUSE pictogram button
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(EmeraldPrimary.copy(alpha = 0.12f))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = EmeraldPrimary,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Пошук активних торгів…",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                            color = EmeraldPrimary
+                        )
+                    }
+
+                    // Single-color pictogram PAUSE button
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clickable(onClick = onStopScan)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Pause,
+                                contentDescription = "Призупинити сканування",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+            } else {
+                // Single-color pictogram action buttons row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(
-                        onClick = onScanNow,
-                        enabled = !isScanning,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
-                        shape = RoundedCornerShape(10.dp)
+                    // 1. Refresh (Оновити)
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = EmeraldPrimary,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                            .clickable(onClick = onScanNow)
                     ) {
-                        if (isScanning) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                color = Color.White,
-                                strokeWidth = 2.dp
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Оновити свіжі торги",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Пошук…")
-                        } else {
-                            Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Оновити зараз")
                         }
                     }
 
-                    OutlinedButton(
-                        onClick = onOpenDateScanDialog,
-                        enabled = !isScanning,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp)
+                    // 2. Deep Search (Глибокий пошук 30 днів - як у Kaggle)
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                            .clickable(onClick = onDeepScan)
                     ) {
-                        Icon(imageVector = Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(18.dp), tint = EmeraldPrimary)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("З дати…", color = MaterialTheme.colorScheme.onSurface)
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.TravelExplore,
+                                contentDescription = "Повний збір за 30 днів (Kaggle)",
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
-                }
 
-                OutlinedButton(
-                    onClick = onExportAll,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Icon(imageVector = Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp), tint = EmeraldPrimary)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Експорт пулу в Excel (.xlsx)", color = MaterialTheme.colorScheme.onSurface)
+                    // 3. Calendar (З дати)
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                            .clickable(onClick = onOpenDateScanDialog)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarMonth,
+                                contentDescription = "Сканувати з обраної дати",
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    // 4. Excel (Експорт)
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                            .clickable(onClick = onExportAll)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.FileDownload,
+                                contentDescription = "Експорт в Excel",
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
                 }
             }
         }

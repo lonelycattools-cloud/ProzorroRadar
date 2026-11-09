@@ -2,6 +2,8 @@ package ua.gov.prozorro.radar.ui.reports
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,6 +66,7 @@ import ua.gov.prozorro.radar.ui.components.CpvPickerDialog
 import ua.gov.prozorro.radar.ui.theme.EmeraldPrimary
 import ua.gov.prozorro.radar.util.CpvMatcher
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ReportsScreen(
     tenders: List<Tender>,
@@ -293,11 +296,12 @@ fun ReportsScreen(
                 ReportType.UrgentDeadlines to ("Дедлайни" to Icons.Default.Schedule)
             )
 
-            LazyRow(
+            FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                items(reportTypes) { (type, info) ->
+                reportTypes.forEach { (type, info) ->
                     val (title, icon) = info
                     val isSelected = selectedReportType::class == type::class
                     ReportTypeCard(
@@ -454,8 +458,12 @@ fun ReportsScreen(
                         Text(
                             text = reportResult.type.title,
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f, fill = false),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = EmeraldPrimary.copy(alpha = 0.15f)
@@ -464,7 +472,9 @@ fun ReportsScreen(
                                 text = reportResult.period,
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                                 color = EmeraldPrimary,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }

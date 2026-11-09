@@ -66,9 +66,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun scanNow() {
+    fun scanNow(deepScan: Boolean = false) {
         viewModelScope.launch {
-            val res = scannerEngine.scanNow()
+            val res = scannerEngine.scanNow(deepScan = deepScan)
             repository.refreshData()
             _topEntities.value = repository.getTopProcuringEntities()
             _topCpvs.value = repository.getTopCpvCategories()
@@ -76,12 +76,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun stopScan() {
+        scannerEngine.requestStop()
+        Toast.makeText(getApplication(), "Зупинка сканування...", Toast.LENGTH_SHORT).show()
+    }
+
     fun scanFromDate(startDateIso: String, cpvCodes: String? = null) {
         viewModelScope.launch {
             if (!cpvCodes.isNullOrBlank()) {
                 preferences.cpvCodes = cpvCodes
             }
-            val res = scannerEngine.scanNow(startDateIso)
+            val res = scannerEngine.scanNow(startDateIso = startDateIso, deepScan = true)
             repository.refreshData()
             _topEntities.value = repository.getTopProcuringEntities()
             _topCpvs.value = repository.getTopCpvCategories()
