@@ -77,7 +77,7 @@ class AppPreferences(context: Context) {
         set(value) = prefs.edit().putInt(KEY_SMTP_PORT, value).apply()
 
     var smtpUser: String
-        get() = prefs.getString(KEY_SMTP_USER, "") ?: ""
+        get() = prefs.getString(KEY_SMTP_USER, "lonelycattools@gmail.com") ?: "lonelycattools@gmail.com"
         set(value) = prefs.edit().putString(KEY_SMTP_USER, value).apply()
 
     var smtpPass: String
@@ -89,7 +89,7 @@ class AppPreferences(context: Context) {
         set(value) = prefs.edit().putBoolean(KEY_SMTP_USE_TLS, value).apply()
 
     var userContactEmail: String
-        get() = prefs.getString(KEY_USER_CONTACT_EMAIL, "") ?: ""
+        get() = prefs.getString(KEY_USER_CONTACT_EMAIL, "lonelycattools@gmail.com") ?: "lonelycattools@gmail.com"
         set(value) = prefs.edit().putString(KEY_USER_CONTACT_EMAIL, value).apply()
 
     var githubRepo: String

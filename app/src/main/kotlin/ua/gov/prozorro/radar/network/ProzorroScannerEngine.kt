@@ -73,14 +73,9 @@ class ProzorroScannerEngine(private val context: Context) {
             var newestDateModified = ""
             var oldestDateModified = ""
 
-            // Generous page limits:
-            // Custom date: up to 300 pages (15,000 items)
-            // History mode: up to 150 pages (7,500 items) or until 30 matching tenders found
-            // Monitor mode: up to 100 pages (5,000 items) or until duplicate threshold reached
-            val maxPages = if (isCustomStart) 300 else if (isHistoryMode) 150 else 100
             var pagesProcessed = 0
 
-            while (!stopScan && pagesProcessed < maxPages) {
+            while (!stopScan) {
                 pagesProcessed++
                 val feed = apiService.fetchFeed(url)
                 if (feed == null || feed.data.isEmpty()) {
@@ -191,10 +186,16 @@ class ProzorroScannerEngine(private val context: Context) {
                     }
                 }
 
-                // In history mode without custom date, stop once we've collected a solid batch of tenders
-                if (isHistoryMode && !isCustomStart && totalFound >= historyTargetCount) {
-                    stopScan = true
-                    break
+                // In history mode without custom date, collect all active tenders for this category
+                // back to 30 days ago (or until duplicate streak / end of feed)
+                if (isHistoryMode && !isCustomStart) {
+                    val thirtyDaysAgoIso = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(
+                        Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000)
+                    )
+                    if (oldestDateModified.isNotBlank() && oldestDateModified <= thirtyDaysAgoIso) {
+                        stopScan = true
+                        break
+                    }
                 }
 
                 if (stopScan) break

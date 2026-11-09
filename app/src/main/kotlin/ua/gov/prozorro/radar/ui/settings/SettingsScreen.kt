@@ -188,7 +188,13 @@ fun SettingsScreen(
                             if (it) WorkScheduler.schedulePeriodicScan(context, forceUpdate = true)
                             else WorkScheduler.cancelPeriodicScan(context)
                         },
-                        colors = SwitchDefaults.colors(checkedThumbColor = EmeraldPrimary)
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = EmeraldPrimary,
+                            uncheckedThumbColor = Color.LightGray,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                        )
                     )
                 }
 
@@ -466,7 +472,13 @@ fun SettingsScreen(
                             pushEnabled = it
                             preferences.pushEnabled = it
                         },
-                        colors = SwitchDefaults.colors(checkedThumbColor = EmeraldPrimary)
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = EmeraldPrimary,
+                            uncheckedThumbColor = Color.LightGray,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                        )
                     )
                 }
 
@@ -494,7 +506,13 @@ fun SettingsScreen(
                             dndEnabled = it
                             preferences.dndNightModeEnabled = it
                         },
-                        colors = SwitchDefaults.colors(checkedThumbColor = EmeraldPrimary)
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = EmeraldPrimary,
+                            uncheckedThumbColor = Color.LightGray,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                        )
                     )
                 }
             }
@@ -708,7 +726,13 @@ fun SettingsScreen(
                             forceUpdate = it
                             preferences.forceUpdate = it
                         },
-                        colors = SwitchDefaults.colors(checkedThumbColor = EmeraldPrimary)
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = EmeraldPrimary,
+                            uncheckedThumbColor = Color.LightGray,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            uncheckedBorderColor = MaterialTheme.colorScheme.outline
+                        )
                     )
                 }
 

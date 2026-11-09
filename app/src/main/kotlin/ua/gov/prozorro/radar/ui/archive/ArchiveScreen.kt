@@ -64,7 +64,7 @@ fun ArchiveScreen(
                 t.title.contains(searchQuery, ignoreCase = true) ||
                 t.procuringEntityName.contains(searchQuery, ignoreCase = true) ||
                 t.procuringEntityEdrpou.contains(searchQuery, ignoreCase = true) ||
-                t.cpvCodes.contains(searchQuery, ignoreCase = true) ||
+                ua.gov.prozorro.radar.util.CpvMatcher.matches(t.cpvCodes, searchQuery) ||
                 t.id.contains(searchQuery, ignoreCase = true)
             }
 
