@@ -11,6 +11,9 @@ class ScanWorker(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
+        if (ProzorroScannerEngine.isScanRunning) {
+            return Result.success()
+        }
         val scanner = ProzorroScannerEngine(applicationContext)
         val result = scanner.scanNow()
         return if (result.success) {

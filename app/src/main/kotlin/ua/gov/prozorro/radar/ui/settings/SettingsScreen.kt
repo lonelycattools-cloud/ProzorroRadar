@@ -120,10 +120,11 @@ fun SettingsScreen(
     var syncDateDisplay by remember { mutableStateOf(preferences.lastSyncDate) }
 
     // SMTP settings state
-    var smtpHost by remember { mutableStateOf(preferences.smtpHost) }
-    var smtpPort by remember { mutableStateOf(preferences.smtpPort.toString()) }
-    var smtpUser by remember { mutableStateOf(preferences.smtpUser) }
-    var smtpPass by remember { mutableStateOf(preferences.smtpPass) }
+    var isCustomSmtpExpanded by remember { mutableStateOf(!preferences.isDefaultSmtp()) }
+    var smtpHost by remember { mutableStateOf(if (preferences.isDefaultSmtp()) "smtp.gmail.com" else preferences.smtpHost) }
+    var smtpPort by remember { mutableStateOf(if (preferences.isDefaultSmtp()) "587" else preferences.smtpPort.toString()) }
+    var smtpUser by remember { mutableStateOf(if (preferences.isDefaultSmtp()) "" else preferences.smtpUser) }
+    var smtpPass by remember { mutableStateOf(if (preferences.isDefaultSmtp()) "" else preferences.smtpPass) }
     var isTestingSmtp by remember { mutableStateOf(false) }
     var showSmtpGuide by remember { mutableStateOf(false) }
     var isSmtpPasswordVisible by remember { mutableStateOf(false) }
@@ -557,213 +558,231 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Active SMTP status banner
-                val isDefaultActive = preferences.isDefaultSmtp()
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = if (isDefaultActive) EmeraldPrimary.copy(alpha = 0.12f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (isDefaultActive) EmeraldPrimary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = if (isDefaultActive) Icons.Default.CheckCircle else Icons.Default.Info,
-                                contentDescription = null,
-                                tint = if (isDefaultActive) EmeraldPrimary else MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isDefaultActive) "Системний поштовий сервіс активний" else "Власний SMTP-сервер",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                color = if (isDefaultActive) EmeraldPrimary else MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = if (isDefaultActive) {
-                                "Розсилка працює автоматично через поштову службу Prozorro Radar (lonelycattools@gmail.com). Додатково налаштовувати пароль не потрібно!"
-                            } else {
-                                "Розсилка налаштована через вашу скриньку: $smtpUser"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (!isDefaultActive) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedButton(
-                                onClick = {
-                                    preferences.resetSmtpToDefault()
-                                    smtpHost = preferences.smtpHost
-                                    smtpPort = preferences.smtpPort.toString()
-                                    smtpUser = preferences.smtpUser
-                                    smtpPass = preferences.smtpPass
-                                    Toast.makeText(context, "Відновлено системні налаштування lonelycattools", Toast.LENGTH_SHORT).show()
-                                },
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(imageVector = Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Повернути системну пошту (lonelycattools)", style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Expandable Instruction card for Custom Gmail / SMTP
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showSmtpGuide = !showSmtpGuide },
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                if (!isCustomSmtpExpanded && preferences.isDefaultSmtp()) {
+                    // System email status banner
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = EmeraldPrimary.copy(alpha = 0.12f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = Icons.Default.HelpOutline,
+                                    imageVector = Icons.Default.CheckCircle,
                                     contentDescription = null,
                                     tint = EmeraldPrimary,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Як підключити свій Gmail (Пароль додатка)?",
-                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    text = "Системна поштова служба Prozorro Radar",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = EmeraldPrimary
                                 )
                             }
-                            Icon(
-                                imageVector = if (showSmtpGuide) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = if (showSmtpGuide) "Згорнути" else "Розгорнути",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        if (showSmtpGuide) {
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                text = "Для безпеки Google вимагає генерувати окремий «Пароль додатка» (App Password) замість основного пароля Google акаунту:",
+                                text = "Розсилка нових знайдених торгів здійснюється автоматично через вбудований сервіс. Усі системні налаштування та паролі надійно захищені і не потребують ручної конфігурації.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "1. Переконайтеся, що у вашому Google акаунті увімкнена Двоетапна перевірка (2-Step Verification).\n" +
-                                       "2. Натисніть кнопку нижче, щоб відкрити сторінку генерації Паролів додатків Google.\n" +
-                                       "3. Введіть назву додатка (наприклад: Prozorro Radar) і натисніть «Створити».\n" +
-                                       "4. Google згенерує 16-значний пароль (наприклад: abcd efgh ijkl mnop).\n" +
-                                       "5. Скопіюйте цей пароль і вставте в поле «Пароль додатку» нижче, а в поле «Логін» — вашу Gmail пошту.\n" +
-                                       "6. Хост залишається smtp.gmail.com, порт 587. Натисніть «Перевірити підключення SMTP».",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = 18.sp
-                            )
                             Spacer(modifier = Modifier.height(10.dp))
-                            Button(
-                                onClick = {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://myaccount.google.com/apppasswords")).apply {
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    }
-                                    try {
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "Не вдалося відкрити браузер", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                            OutlinedButton(
+                                onClick = { isCustomSmtpExpanded = true },
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Icon(imageVector = Icons.Default.OpenInBrowser, contentDescription = null, tint = EmeraldPrimary, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Відкрити Google Паролі додатків", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.labelMedium)
+                                Icon(imageVector = Icons.Default.Email, contentDescription = null, modifier = Modifier.size(16.dp), tint = EmeraldPrimary)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Налаштувати власну пошту (Custom SMTP)", style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-                Text(
-                    text = "Параметри поштового сервера (SMTP):",
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = smtpHost,
-                        onValueChange = {
-                            smtpHost = it
-                            preferences.smtpHost = it
-                        },
-                        label = { Text("Сервер SMTP") },
-                        modifier = Modifier.weight(2f),
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = smtpPort,
-                        onValueChange = {
-                            smtpPort = it
-                            preferences.smtpPort = it.toIntOrNull() ?: 587
-                        },
-                        label = { Text("Порт") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-                OutlinedTextField(
-                    value = smtpUser,
-                    onValueChange = {
-                        smtpUser = it
-                        preferences.smtpUser = it
-                    },
-                    label = { Text("Логін (Email відправника)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
-                OutlinedTextField(
-                    value = smtpPass,
-                    onValueChange = {
-                        smtpPass = it
-                        preferences.smtpPass = it
-                    },
-                    label = { Text("Пароль або пароль додатку") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    visualTransformation = if (isSmtpPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { isSmtpPasswordVisible = !isSmtpPasswordVisible }) {
+                } else {
+                    // Custom SMTP configuration
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Власний поштовий сервер (SMTP)",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        TextButton(
+                            onClick = {
+                                preferences.resetSmtpToDefault()
+                                smtpHost = "smtp.gmail.com"
+                                smtpPort = "587"
+                                smtpUser = ""
+                                smtpPass = ""
+                                isCustomSmtpExpanded = false
+                                Toast.makeText(context, "Увімкнено захищену системну пошту", Toast.LENGTH_SHORT).show()
+                            }
+                        ) {
                             Icon(
-                                imageVector = if (isSmtpPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = if (isSmtpPasswordVisible) "Приховати пароль" else "Показати пароль"
+                                imageVector = Icons.Default.RestartAlt,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = EmeraldPrimary
                             )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Повернути системну пошту", color = EmeraldPrimary, style = MaterialTheme.typography.labelSmall)
                         }
                     }
-                )
 
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Expandable Instruction card for Custom Gmail / SMTP
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showSmtpGuide = !showSmtpGuide },
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                    Icon(
+                                        imageVector = Icons.Default.HelpOutline,
+                                        contentDescription = null,
+                                        tint = EmeraldPrimary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Як підключити свій Gmail (Пароль додатка)?",
+                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Icon(
+                                    imageVector = if (showSmtpGuide) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                    contentDescription = if (showSmtpGuide) "Згорнути" else "Розгорнути",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            if (showSmtpGuide) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = "Для безпеки Google вимагає генерувати окремий «Пароль додатка» (App Password) замість основного пароля Google акаунту:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "1. Переконайтеся, що у вашому Google акаунті увімкнена Двоетапна перевірка (2-Step Verification).\n" +
+                                           "2. Натисніть кнопку нижче, щоб відкрити сторінку генерації Паролів додатків Google.\n" +
+                                           "3. Введіть назву додатка (наприклад: Prozorro Radar) і натисніть «Створити».\n" +
+                                           "4. Google згенерує 16-значний пароль (наприклад: abcd efgh ijkl mnop).\n" +
+                                           "5. Скопіюйте цей пароль і вставте в поле «Пароль додатку» нижче, а в поле «Логін» — вашу Gmail пошту.\n" +
+                                           "6. Хост залишається smtp.gmail.com, порт 587. Натисніть «Перевірити підключення SMTP».",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    lineHeight = 18.sp
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Button(
+                                    onClick = {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://myaccount.google.com/apppasswords")).apply {
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        try {
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Не вдалося відкрити браузер", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(imageVector = Icons.Default.OpenInBrowser, contentDescription = null, tint = EmeraldPrimary, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Відкрити Google Паролі додатків", color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.labelMedium)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = smtpHost,
+                            onValueChange = {
+                                smtpHost = it
+                                preferences.smtpHost = it
+                            },
+                            label = { Text("Сервер SMTP") },
+                            placeholder = { Text("smtp.gmail.com") },
+                            modifier = Modifier.weight(2f),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = smtpPort,
+                            onValueChange = {
+                                smtpPort = it
+                                preferences.smtpPort = it.toIntOrNull() ?: 587
+                            },
+                            label = { Text("Порт") },
+                            placeholder = { Text("587") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = if (smtpUser.trim().equals(AppPreferences.DEFAULT_SMTP_USER, ignoreCase = true)) "" else smtpUser,
+                        onValueChange = {
+                            smtpUser = it
+                            preferences.smtpUser = it
+                        },
+                        label = { Text("Логін (Email відправника)") },
+                        placeholder = { Text("your_email@gmail.com") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = if (smtpPass == AppPreferences.DEFAULT_SMTP_PASS) "" else smtpPass,
+                        onValueChange = {
+                            smtpPass = it
+                            preferences.smtpPass = it
+                        },
+                        label = { Text("Пароль додатку") },
+                        placeholder = { Text("16-значний пароль додатку") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        visualTransformation = if (isSmtpPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { isSmtpPasswordVisible = !isSmtpPasswordVisible }) {
+                                Icon(
+                                    imageVector = if (isSmtpPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (isSmtpPasswordVisible) "Приховати пароль" else "Показати пароль"
+                                )
+                            }
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
                     OutlinedButton(
                         onClick = {
+                            if (smtpUser.isBlank() || smtpPass.isBlank()) {
+                                Toast.makeText(context, "Введіть логін та пароль додатку для перевірки", Toast.LENGTH_SHORT).show()
+                                return@OutlinedButton
+                            }
                             scope.launch {
                                 isTestingSmtp = true
                                 val res = emailSender.testSmtpConnection()
@@ -776,7 +795,7 @@ fun SettingsScreen(
                             }
                         },
                         enabled = !isTestingSmtp,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         if (isTestingSmtp) {
@@ -786,20 +805,23 @@ fun SettingsScreen(
                         Text("Перевірити SMTP")
                     }
 
-                    if (!isDefaultActive) {
-                        OutlinedButton(
-                            onClick = {
-                                preferences.resetSmtpToDefault()
-                                smtpHost = preferences.smtpHost
-                                smtpPort = preferences.smtpPort.toString()
-                                smtpUser = preferences.smtpUser
-                                smtpPass = preferences.smtpPass
-                                Toast.makeText(context, "Відновлено lonelycattools", Toast.LENGTH_SHORT).show()
-                            },
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-                        }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            preferences.resetSmtpToDefault()
+                            smtpHost = "smtp.gmail.com"
+                            smtpPort = "587"
+                            smtpUser = ""
+                            smtpPass = ""
+                            isCustomSmtpExpanded = false
+                            Toast.makeText(context, "Увімкнено захищену системну пошту", Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(imageVector = Icons.Default.RestartAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Повернутися до системної пошти")
                     }
                 }
             }

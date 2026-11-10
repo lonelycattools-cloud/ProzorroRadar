@@ -4,6 +4,7 @@ import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -32,6 +33,14 @@ object ScanController {
 
 class ProzorroScannerEngine(private val context: Context) {
 
+    companion object {
+        const val BASE_API_URL = "https://public.api.openprocurement.org/api/2.5/tenders"
+        private val scanMutex = Mutex()
+        @Volatile
+        var isScanRunning: Boolean = false
+            private set
+    }
+
     private val apiService = ProzorroApiService()
     private val repository = TenderRepository.getInstance(context)
     private val preferences = AppPreferences(context)
@@ -47,14 +56,24 @@ class ProzorroScannerEngine(private val context: Context) {
         deepScan: Boolean = false,
         resetCheckpoint: Boolean = false
     ): ScanResult = withContext(Dispatchers.IO) {
-        ScanController.reset()
-        repository.setScanning(true)
-        repository.updateScanProgress(ScanProgress(0, 0, "", "Ініціалізація пошуку у стрічці Prozorro…"))
-        val startTime = System.currentTimeMillis()
-        var totalFound = 0
-        var totalExamined = 0
+        if (!scanMutex.tryLock()) {
+            return@withContext ScanResult(
+                success = false,
+                newCount = 0,
+                examinedCount = 0,
+                message = "Сканування вже виконується в іншому потоці"
+            )
+        }
 
+        var totalExamined = 0
         try {
+            isScanRunning = true
+            ScanController.reset()
+            repository.setScanning(true)
+            repository.updateScanProgress(ScanProgress(0, 0, "", "Ініціалізація пошуку у стрічці Prozorro…"))
+            val startTime = System.currentTimeMillis()
+            var totalFound = 0
+
             if (resetCheckpoint) {
                 preferences.resetSyncOffset()
             }
@@ -309,9 +328,11 @@ class ProzorroScannerEngine(private val context: Context) {
                 message = msg
             )
         } finally {
+            isScanRunning = false
             ScanController.reset()
             repository.setScanning(false)
             repository.updateScanProgress(null)
+            scanMutex.unlock()
         }
     }
 }

@@ -51,7 +51,7 @@ class ScanForegroundService : Service() {
             return START_NOT_STICKY
         }
 
-        if (currentScanJob?.isActive == true) {
+        if (ProzorroScannerEngine.isScanRunning || currentScanJob?.isActive == true) {
             return START_NOT_STICKY
         }
 

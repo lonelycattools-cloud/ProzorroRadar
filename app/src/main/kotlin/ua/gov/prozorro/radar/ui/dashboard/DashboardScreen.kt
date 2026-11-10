@@ -49,6 +49,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -378,6 +379,13 @@ private fun ScannerControlCard(
     onOpenDateScanDialog: () -> Unit,
     onExportAll: () -> Unit
 ) {
+    var maxExaminedSoFar by remember { mutableStateOf(0) }
+    LaunchedEffect(isScanning) {
+        if (!isScanning) {
+            maxExaminedSoFar = 0
+        }
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val alphaAnim by infiniteTransition.animateFloat(
         initialValue = 0.4f,
@@ -419,14 +427,23 @@ private fun ScannerControlCard(
 
             Spacer(modifier = Modifier.height(4.dp))
             if (isScanning) {
-                val examined = scanProgress?.examinedCount ?: 0
+                val incomingExamined = scanProgress?.examinedCount ?: 0
+                if (incomingExamined > maxExaminedSoFar) {
+                    maxExaminedSoFar = incomingExamined
+                }
+                val examined = if (isScanning) maxOf(incomingExamined, maxExaminedSoFar) else incomingExamined
                 val found = scanProgress?.foundCount ?: 0
                 val feedDate = scanProgress?.currentFeedDate.orEmpty()
+                val formattedExamined = if (examined >= 1000) {
+                    String.format(java.util.Locale.US, "%,d", examined).replace(',', ' ')
+                } else {
+                    "$examined"
+                }
 
                 val displayText = if (examined == 0 && found == 0 && !scanProgress?.statusText.isNullOrBlank()) {
                     scanProgress.statusText
                 } else {
-                    "Перевірено: $examined торгів • Знайдено: +$found"
+                    "Перевірено: $formattedExamined торгів • Знайдено: +$found"
                 }
 
                 Text(
