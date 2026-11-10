@@ -44,6 +44,10 @@ import ua.gov.prozorro.radar.ui.help.HelpScreen
 import ua.gov.prozorro.radar.ui.reports.ReportsScreen
 import ua.gov.prozorro.radar.ui.settings.SettingsScreen
 import ua.gov.prozorro.radar.ui.theme.EmeraldPrimary
+import ua.gov.prozorro.radar.ui.wizard.SetupWizardDialog
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 enum class AppTab(val title: String, val icon: ImageVector) {
     DASHBOARD("Головна", Icons.Default.Dashboard),
@@ -73,6 +77,7 @@ fun MainScreen(
     val downloadedApkFile by viewModel.downloadedApkFile.collectAsStateWithLifecycle()
 
     var showPermissionsDialog by remember { mutableStateOf(false) }
+    var showSetupWizard by remember { mutableStateOf(!viewModel.preferences.isWizardCompleted) }
 
     // Request Notification permission (Android 13+)
     val notificationLauncher = rememberLauncherForActivityResult(
@@ -145,7 +150,8 @@ fun MainScreen(
                         onResetCheckpoint = { viewModel.resetSyncOffset() },
                         onToggleFavorite = { id, curr -> viewModel.toggleFavorite(id, curr) },
                         onNavigateToArchive = { currentTab = AppTab.ARCHIVE },
-                        onExportAll = { viewModel.exportAllTenders(context) }
+                        onExportAll = { viewModel.exportAllTenders(context) },
+                        onLaunchWizard = { showSetupWizard = true }
                     )
                 }
                 AppTab.ARCHIVE -> {
@@ -170,7 +176,8 @@ fun MainScreen(
                         onCheckUpdate = { viewModel.checkForUpdate(isManual = true) },
                         onResetSyncOffset = { viewModel.resetSyncOffset() },
                         onCategoriesChanged = { viewModel.loadData() },
-                        onClearDatabase = { viewModel.clearAllTenders() }
+                        onClearDatabase = { viewModel.clearAllTenders() },
+                        onLaunchWizard = { showSetupWizard = true }
                     )
                 }
                 AppTab.HELP -> {
@@ -200,6 +207,36 @@ fun MainScreen(
                         e.printStackTrace()
                     }
                 }
+            }
+        )
+    }
+
+    if (showSetupWizard) {
+        SetupWizardDialog(
+            initialCpvCodes = viewModel.preferences.cpvCodes,
+            initialRecipientEmails = viewModel.preferences.recipientEmails,
+            initialScanIntervalMinutes = viewModel.preferences.scanIntervalMinutes,
+            initialPushEnabled = viewModel.preferences.pushEnabled,
+            onDismiss = {
+                viewModel.preferences.isWizardCompleted = true
+                showSetupWizard = false
+            },
+            onFinish = { cpvs, emails, interval, push, days ->
+                viewModel.preferences.cpvCodes = cpvs
+                viewModel.preferences.recipientEmails = emails
+                viewModel.preferences.scanIntervalMinutes = interval
+                viewModel.preferences.pushEnabled = push
+                viewModel.preferences.isWizardCompleted = true
+                showSetupWizard = false
+
+                // Update periodic schedule with new interval
+                ua.gov.prozorro.radar.service.WorkScheduler.schedulePeriodicScan(context, forceUpdate = true)
+                viewModel.loadData()
+
+                // Calculate start date ISO for initial scan
+                val cal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -days) }
+                val startIso = SimpleDateFormat("yyyy-MM-dd'T'00:00:00", Locale.getDefault()).format(cal.time)
+                viewModel.scanFromDate(startIso, cpvs, resetCheckpoint = true)
             }
         )
     }

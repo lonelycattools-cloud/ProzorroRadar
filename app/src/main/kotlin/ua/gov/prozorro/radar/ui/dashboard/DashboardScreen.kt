@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Gavel
@@ -94,7 +95,8 @@ fun DashboardScreen(
     onResetCheckpoint: () -> Unit = {},
     onToggleFavorite: (String, Boolean) -> Unit,
     onNavigateToArchive: () -> Unit,
-    onExportAll: () -> Unit
+    onExportAll: () -> Unit,
+    onLaunchWizard: () -> Unit = {}
 ) {
     var selectedTender by remember { mutableStateOf<Tender?>(null) }
     var showDateScanDialog by remember { mutableStateOf(false) }
@@ -136,7 +138,8 @@ fun DashboardScreen(
                         onResetCheckpoint = { showResetCheckpointDialog = true },
                         onStopScan = onStopScan,
                         onOpenDateScanDialog = { showDateScanDialog = true },
-                        onExportAll = onExportAll
+                        onExportAll = onExportAll,
+                        onLaunchWizard = onLaunchWizard
                     )
                 }
             }
@@ -160,7 +163,8 @@ fun DashboardScreen(
                     onResetCheckpoint = { showResetCheckpointDialog = true },
                     onStopScan = onStopScan,
                     onOpenDateScanDialog = { showDateScanDialog = true },
-                    onExportAll = onExportAll
+                    onExportAll = onExportAll,
+                    onLaunchWizard = onLaunchWizard
                 )
             }
         }
@@ -194,7 +198,11 @@ fun DashboardScreen(
 
         if (tenders.isEmpty()) {
             item {
-                EmptyTendersBanner(isScanning = isScanning, onScanNow = onScanNow)
+                EmptyTendersBanner(
+                    isScanning = isScanning,
+                    onScanNow = onScanNow,
+                    onLaunchWizard = onLaunchWizard
+                )
             }
         } else {
             items(tenders.take(8), key = { it.id }) { tender ->
@@ -377,7 +385,8 @@ private fun ScannerControlCard(
     onResetCheckpoint: () -> Unit,
     onStopScan: () -> Unit,
     onOpenDateScanDialog: () -> Unit,
-    onExportAll: () -> Unit
+    onExportAll: () -> Unit,
+    onLaunchWizard: () -> Unit = {}
 ) {
     var maxExaminedSoFar by remember { mutableStateOf(0) }
     LaunchedEffect(isScanning) {
@@ -651,6 +660,26 @@ private fun ScannerControlCard(
                             )
                         }
                     }
+
+                    // 5. Wizard (Швидкий майстер налаштування)
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                            .clickable(onClick = onLaunchWizard)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.AutoFixHigh,
+                                contentDescription = "Майстер налаштування",
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -712,7 +741,11 @@ private fun MetricsGrid(metrics: DashboardMetrics) {
 }
 
 @Composable
-private fun EmptyTendersBanner(isScanning: Boolean, onScanNow: () -> Unit) {
+private fun EmptyTendersBanner(
+    isScanning: Boolean,
+    onScanNow: () -> Unit,
+    onLaunchWizard: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
@@ -737,9 +770,25 @@ private fun EmptyTendersBanner(isScanning: Boolean, onScanNow: () -> Unit) {
             Button(
                 onClick = onScanNow,
                 enabled = !isScanning,
+                modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
             ) {
                 Text("Розпочати перший пошук")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onLaunchWizard,
+                modifier = Modifier.fillMaxWidth(),
+                border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldPrimary)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoFixHigh,
+                    contentDescription = null,
+                    tint = EmeraldPrimary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Запустити майстер налаштування", color = EmeraldPrimary)
             }
         }
     }

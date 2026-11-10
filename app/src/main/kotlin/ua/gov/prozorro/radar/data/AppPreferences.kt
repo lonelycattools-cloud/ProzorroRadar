@@ -124,6 +124,10 @@ class AppPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_FORCE_UPDATE, false)
         set(value) = prefs.edit().putBoolean(KEY_FORCE_UPDATE, value).apply()
 
+    var isWizardCompleted: Boolean
+        get() = prefs.getBoolean(KEY_WIZARD_COMPLETED, false)
+        set(value) = prefs.edit().putBoolean(KEY_WIZARD_COMPLETED, value).apply()
+
     fun getCleanCpvPrefixes(): List<String> {
         return cpvCodes.split(",")
             .map { it.trim().split("-")[0].trim() }
@@ -162,5 +166,6 @@ class AppPreferences(context: Context) {
         private const val KEY_USER_CONTACT_EMAIL = "user_contact_email"
         private const val KEY_GITHUB_REPO = "github_repo"
         private const val KEY_FORCE_UPDATE = "force_update"
+        private const val KEY_WIZARD_COMPLETED = "wizard_completed"
     }
 }
