@@ -192,7 +192,10 @@ def draw_pill(draw, x, y, text, font, bg_color, text_color, padding_x=14, paddin
 # 1. APP ICON (512 x 512 px)
 # ==============================================================================
 def generate_icon():
-    print("Generating icon_512x512.png...")
+    print("Generating official app mascot icon_512x512.png...")
+    import subprocess
+    subprocess.run(["python", r"c:\WORK\ProzoroAndroid\scripts\render_mascot.py"], check=True)
+    return
     size = (512, 512)
     img = Image.new("RGBA", size, DARK_BG_TOP)
     draw_vertical_gradient(img, (7, 11, 20), (14, 25, 45))
@@ -392,10 +395,13 @@ def generate_feature_graphic():
                                 fill=(19, 28, 40, 220), outline=(38, 53, 74), width=1)
         hdraw.text((bx + 18 - bbox[0], by - (bbox[3] - bbox[1]) // 2 - bbox[1]), label, font=font_mini, fill=WHITE)
 
-    # Central Radar Beacon
-    hdraw.ellipse([radar_cx - 16, radar_cy - 16, radar_cx + 16, radar_cy + 16],
-                  fill=(10, 61, 34, 240), outline=EMERALD_LIGHT, width=2)
-    hdraw.ellipse([radar_cx - 6, radar_cy - 6, radar_cx + 6, radar_cy + 6], fill=EMERALD_LIGHT)
+    # Central Radar Mascot
+    mascot_path = os.path.join(OUTPUT_DIR, "mascot_512.png")
+    if os.path.exists(mascot_path):
+        mascot = Image.open(mascot_path)
+        m_size = 180
+        mascot_res = mascot.resize((m_size, m_size), Image.Resampling.LANCZOS)
+        hud_layer.paste(mascot_res, (radar_cx - m_size // 2, radar_cy - m_size // 2), mascot_res)
 
     # Floating KPI cards
     kpi_w, kpi_h = 190, 62
