@@ -1,8 +1,8 @@
 """
-Prozorro Radar - Play Store Asset Generator
-Generates:
-1. icon_512x512.png (512x512, opaque PNG)
-2. feature_graphic_1024x500.png (1024x500 PNG)
+Prozorro Radar - Play Store Asset Generator (Vector-Icon Edition)
+Generates pixel-perfect Google Play Store marketing assets with native vector icons:
+1. icon_512x512.png (512x512, 32-bit opaque PNG)
+2. feature_graphic_1024x500.png (1024x500 PNG, no tofu square glyphs)
 3. screenshot_1_dashboard.png (1080x1920 PNG)
 4. screenshot_2_wizard.png (1080x1920 PNG)
 5. screenshot_3_analytics.png (1080x1920 PNG)
@@ -16,7 +16,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 OUTPUT_DIR = r"c:\WORK\ProzoroAndroid\play_store_assets"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Color Palette (matching Color.kt)
+# Color Palette (matching Color.kt & Material 3 Dark theme)
 DARK_BG_TOP = (7, 11, 18)
 DARK_BG_BOTTOM = (19, 30, 51)
 SLATE_BG = (11, 17, 26)
@@ -64,26 +64,127 @@ def draw_vertical_gradient(img, start_color, end_color):
         b = int(start_color[2] + (end_color[2] - start_color[2]) * factor)
         draw.line([(0, y), (w, y)], fill=(r, g, b))
 
-def draw_glow_circle(img, cx, cy, radius, color, max_alpha=120):
-    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    odraw = ImageDraw.Draw(overlay)
-    steps = 8
-    for i in range(steps, 0, -1):
-        r = radius + i * 5
-        alpha = int(max_alpha * (1.0 - i / steps) * 0.4)
-        odraw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(color[0], color[1], color[2], alpha))
-    odraw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=(color[0], color[1], color[2], max_alpha))
-    img.alpha_composite(overlay)
+# ==============================================================================
+# VECTOR ICON DRAWING ENGINE (Prevents any missing font square glyphs)
+# ==============================================================================
+def draw_vector_icon(draw, icon_name, x, y, size, color):
+    """Renders clean, high-resolution vector glyphs directly with PIL ImageDraw."""
+    s = size
+    if icon_name == 'radar':
+        cx, cy = x + s // 2, y + s // 2
+        draw.ellipse([cx - s//2, cy - s//2, cx + s//2, cy + s//2], outline=color, width=2)
+        draw.ellipse([cx - s//4, cy - s//4, cx + s//4, cy + s//4], outline=color, width=1)
+        draw.ellipse([cx - 2, cy - 2, cx + 2, cy + 2], fill=color)
+        draw.line([(cx - s//2, cy), (cx + s//2, cy)], fill=color, width=1)
+        draw.line([(cx, cy - s//2), (cx, cy + s//2)], fill=color, width=1)
 
-def draw_pill(draw, x, y, text, font, bg_color, text_color, padding_x=14, padding_y=6, outline=None):
+    elif icon_name == 'chart':
+        bw = max(2, s // 4)
+        draw.rounded_rectangle([x, y + s * 0.55, x + bw, y + s], radius=1, fill=color)
+        draw.rounded_rectangle([x + bw + 2, y + s * 0.2, x + 2*bw + 2, y + s], radius=1, fill=color)
+        draw.rounded_rectangle([x + 2*bw + 4, y + s * 0.38, x + 3*bw + 4, y + s], radius=1, fill=color)
+
+    elif icon_name == 'mail':
+        draw.rounded_rectangle([x, y + 2, x + s, y + s - 2], radius=2, outline=color, width=2)
+        draw.line([(x + 2, y + 4), (x + s // 2, y + s // 2 + 1), (x + s - 2, y + 4)], fill=color, width=2)
+
+    elif icon_name == 'shield':
+        draw.polygon([(x + s//2, y), (x + s, y + s//4), (x + s, y + s*5//8),
+                      (x + s//2, y + s), (x, y + s*5//8), (x, y + s//4)], outline=color, width=2)
+        draw.line([(x + s*0.32, y + s*0.52), (x + s*0.48, y + s*0.68), (x + s*0.72, y + s*0.35)],
+                  fill=color, width=2)
+
+    elif icon_name == 'search':
+        r = int(s * 0.35)
+        cx, cy = x + r + 1, y + r + 1
+        draw.ellipse([cx - r, cy - r, cx + r, cy + r], outline=color, width=2)
+        draw.line([(cx + int(r * 0.7), cy + int(r * 0.7)), (x + s - 1, y + s - 1)], fill=color, width=2)
+
+    elif icon_name == 'refresh':
+        cx, cy = x + s // 2, y + s // 2
+        r = s // 2 - 2
+        draw.arc([cx - r, cy - r, cx + r, cy + r], start=25, end=290, fill=color, width=2)
+        draw.polygon([(cx + r - 3, cy - 2), (cx + r + 4, cy - 2), (cx + r, cy + 4)], fill=color)
+
+    elif icon_name == 'folder':
+        draw.polygon([(x, y + 3), (x + s*0.4, y + 3), (x + s*0.52, y + 6),
+                      (x + s, y + 6), (x + s, y + s), (x, y + s)], outline=color, width=2)
+
+    elif icon_name == 'gear':
+        cx, cy = x + s // 2, y + s // 2
+        draw.ellipse([cx - s//3, cy - s//3, cx + s//3, cy + s//3], outline=color, width=2)
+        draw.ellipse([cx - 2, cy - 2, cx + 2, cy + 2], fill=color)
+        for ang in range(0, 360, 45):
+            rad = math.radians(ang)
+            x1 = cx + int((s//3) * math.cos(rad))
+            y1 = cy + int((s//3) * math.sin(rad))
+            x2 = cx + int((s//2) * math.cos(rad))
+            y2 = cy + int((s//2) * math.sin(rad))
+            draw.line([(x1, y1), (x2, y2)], fill=color, width=2)
+
+    elif icon_name == 'grid':
+        gw = s // 2 - 2
+        draw.rounded_rectangle([x, y, x + gw, y + gw], radius=1, fill=color)
+        draw.rounded_rectangle([x + gw + 3, y, x + s, y + gw], radius=1, fill=color)
+        draw.rounded_rectangle([x, y + gw + 3, x + gw, y + s], radius=1, fill=color)
+        draw.rounded_rectangle([x + gw + 3, y + gw + 3, x + s, y + s], radius=1, fill=color)
+
+    elif icon_name == 'pulse_dot':
+        cx, cy = x + s // 2, y + s // 2
+        r_outer = s // 2
+        draw.ellipse([cx - r_outer, cy - r_outer, cx + r_outer, cy + r_outer],
+                     outline=color, width=1)
+        r_inner = max(2, s // 3)
+        draw.ellipse([cx - r_inner, cy - r_inner, cx + r_inner, cy + r_inner], fill=color)
+
+    elif icon_name == 'building':
+        draw.rectangle([x + 2, y + 2, x + s - 2, y + s], outline=color, width=1)
+        for wx in [x + 4, x + s - 7]:
+            for wy in [y + 4, y + 8, y + 12]:
+                draw.rectangle([wx, wy, wx + 2, wy + 2], fill=color)
+
+    elif icon_name == 'star':
+        cx, cy = x + s // 2, y + s // 2
+        r_out = s // 2
+        r_in = r_out * 0.42
+        pts = []
+        for i in range(10):
+            r = r_out if i % 2 == 0 else r_in
+            ang = math.radians(i * 36 - 90)
+            pts.append((cx + r * math.cos(ang), cy + r * math.sin(ang)))
+        draw.polygon(pts, fill=color)
+
+    elif icon_name == 'play':
+        draw.polygon([(x + 2, y + 1), (x + s, y + s // 2), (x + 2, y + s - 1)], fill=color)
+
+    elif icon_name == 'arrow_right':
+        cy = y + s // 2
+        draw.line([(x + 2, cy), (x + s - 2, cy)], fill=color, width=2)
+        draw.line([(x + s - 6, cy - 4), (x + s - 2, cy), (x + s - 6, cy + 4)], fill=color, width=2)
+
+    elif icon_name == 'arrow_down':
+        cx = x + s // 2
+        draw.line([(cx, y + 2), (cx, y + s - 2)], fill=color, width=3)
+        draw.line([(cx - 5, y + s - 7), (cx, y + s - 2), (cx + 5, y + s - 7)], fill=color, width=3)
+
+
+def draw_pill(draw, x, y, text, font, bg_color, text_color, padding_x=14, padding_y=6,
+              outline=None, icon=None, icon_color=None, icon_size=14):
     bbox = font.getbbox(text)
     tw = bbox[2] - bbox[0]
     th = bbox[3] - bbox[1]
-    w = tw + padding_x * 2
+    extra_icon_w = (icon_size + 8) if icon else 0
+    w = tw + padding_x * 2 + extra_icon_w
     h = th + padding_y * 2
     radius = h // 2
     draw.rounded_rectangle([x, y, x + w, y + h], radius=radius, fill=bg_color, outline=outline, width=1 if outline else 0)
-    draw.text((x + padding_x - bbox[0], y + padding_y - bbox[1]), text, font=font, fill=text_color)
+
+    cur_x = x + padding_x
+    if icon:
+        draw_vector_icon(draw, icon, cur_x, y + (h - icon_size) // 2, icon_size, icon_color or text_color)
+        cur_x += extra_icon_w
+
+    draw.text((cur_x - bbox[0], y + padding_y - bbox[1]), text, font=font, fill=text_color)
     return w, h
 
 
@@ -148,7 +249,7 @@ def generate_icon():
 
     img = Image.alpha_composite(img, ring_layer)
 
-    # Radar Sweep Sector (from -35 deg to 35 deg, rotating pulse beam)
+    # Radar Sweep Sector
     sweep_layer = Image.new("RGBA", size, (0, 0, 0, 0))
     sdraw = ImageDraw.Draw(sweep_layer)
     sweep_radius = 210
@@ -163,52 +264,45 @@ def generate_icon():
         intensity = (i / float(total_steps)) ** 1.8
         alpha = int(140 * intensity)
         sdraw.line([(cx, cy), (x_edge, y_edge)], fill=(0, 230, 118, alpha), width=3)
-    # Bright leading edge
     lead_rad = math.radians(end_deg)
     lead_x = cx + sweep_radius * math.cos(lead_rad)
     lead_y = cy + sweep_radius * math.sin(lead_rad)
     sdraw.line([(cx, cy), (lead_x, lead_y)], fill=(255, 255, 255, 220), width=2)
     img = Image.alpha_composite(img, sweep_layer)
 
-    # Glowing Radar Blips (detected tenders!)
+    # Glowing Radar Blips
     blip_layer = Image.new("RGBA", size, (0, 0, 0, 0))
     bdraw = ImageDraw.Draw(blip_layer)
 
     blips = [
-        (330, 190, EMERALD_LIGHT, 7, "tender1"),
-        (200, 310, STATUS_WARNING, 6, "tender2"),
-        (360, 320, STATUS_INFO, 5, "tender3"),
-        (170, 170, EMERALD_PRIMARY, 5, "tender4"),
-        (290, 280, STATUS_ACTIVE, 4, "tender5"),
+        (330, 190, EMERALD_LIGHT, 7),
+        (200, 310, STATUS_WARNING, 6),
+        (360, 320, STATUS_INFO, 5),
+        (170, 170, EMERALD_PRIMARY, 5),
+        (290, 280, STATUS_ACTIVE, 4),
     ]
-    for bx, by, col, rad, _ in blips:
-        # blip pulse halo
+    for bx, by, col, rad in blips:
         bdraw.ellipse([bx - rad * 2.5, by - rad * 2.5, bx + rad * 2.5, by + rad * 2.5],
                       outline=(col[0], col[1], col[2], 90), width=1)
-        # blip center
         bdraw.ellipse([bx - rad, by - rad, bx + rad, by + rad], fill=col)
-        # bright pin
         bdraw.ellipse([bx - rad // 2, by - rad // 2, bx + rad // 2, by + rad // 2], fill=WHITE)
 
     img = Image.alpha_composite(img, blip_layer)
 
-    # Stylized Center Symbol: Modern Radar Diamond + Chart Pulse Glyphs
+    # Stylized Center Symbol
     center_layer = Image.new("RGBA", size, (0, 0, 0, 0))
     cdraw = ImageDraw.Draw(center_layer)
-
-    # Center target circle
     cdraw.ellipse([cx - 24, cy - 24, cx + 24, cy + 24], fill=(10, 61, 34, 230), outline=EMERALD_LIGHT, width=2)
     cdraw.ellipse([cx - 10, cy - 10, cx + 10, cy + 10], fill=EMERALD_LIGHT)
     cdraw.ellipse([cx - 4, cy - 4, cx + 4, cy + 4], fill=WHITE)
 
-    # Center pulse waves (accent arcs)
     for r in [38, 48]:
         cdraw.arc([cx - r, cy - r, cx + r, cy + r], start=210, end=330, fill=EMERALD_LIGHT, width=2)
         cdraw.arc([cx - r, cy - r, cx + r, cy + r], start=30, end=150, fill=EMERALD_LIGHT, width=2)
 
     img = Image.alpha_composite(img, center_layer)
 
-    # Bottom Branding Pill inside icon: "PROZORRO RADAR"
+    # Bottom Branding Pill: "PROZORRO RADAR"
     brand_layer = Image.new("RGBA", size, (0, 0, 0, 0))
     br_draw = ImageDraw.Draw(brand_layer)
     font_brand = get_font(20, bold=True)
@@ -223,23 +317,22 @@ def generate_icon():
     br_draw.text((px - bbox[0], py - bbox[1]), brand_text, font=font_brand, fill=WHITE)
     img = Image.alpha_composite(img, brand_layer)
 
-    # Final 32-bit RGBA conversion with full opacity (no transparency)
     final_img = img.convert("RGBA")
     final_path = os.path.join(OUTPUT_DIR, "icon_512x512.png")
     final_img.save(final_path, "PNG")
-    print(f"Saved: {final_path} (size: {final_img.size}, mode: {final_img.mode})")
+    print(f"Saved: {final_path}")
 
 
 # ==============================================================================
-# 2. FEATURE GRAPHIC (1024 x 500 px)
+# 2. FEATURE GRAPHIC (1024 x 500 px) - FIXED VECTOR ICONS (NO SQUARES)
 # ==============================================================================
 def generate_feature_graphic():
-    print("Generating feature_graphic_1024x500.png...")
+    print("Generating feature_graphic_1024x500.png (Clean Vector Icons)...")
     size = (1024, 500)
     img = Image.new("RGBA", size, DARK_BG_TOP)
     draw_vertical_gradient(img, (9, 14, 24), (19, 30, 51))
 
-    # Tech grid background pattern
+    # Tech grid background
     grid_layer = Image.new("RGBA", size, (0, 0, 0, 0))
     gdraw = ImageDraw.Draw(grid_layer)
     for x in range(0, 1024, 40):
@@ -291,7 +384,7 @@ def generate_feature_graphic():
         hdraw.ellipse([bx - 12, by - 12, bx + 12, by + 12], outline=(col[0], col[1], col[2], 90), width=1)
         hdraw.ellipse([bx - 6, by - 6, bx + 6, by + 6], fill=col)
         hdraw.ellipse([bx - 2, by - 2, bx + 2, by + 2], fill=WHITE)
-        # label pill
+
         bbox = font_mini.getbbox(label)
         lw = bbox[2] - bbox[0] + 12
         lh = bbox[3] - bbox[1] + 8
@@ -304,8 +397,7 @@ def generate_feature_graphic():
                   fill=(10, 61, 34, 240), outline=EMERALD_LIGHT, width=2)
     hdraw.ellipse([radar_cx - 6, radar_cy - 6, radar_cx + 6, radar_cy + 6], fill=EMERALD_LIGHT)
 
-    # Floating KPI cards overlapping radar HUD
-    # Card 1: Top Right KPI
+    # Floating KPI cards
     kpi_w, kpi_h = 190, 62
     k1_x, k1_y = 570, 70
     hdraw.rounded_rectangle([k1_x, k1_y, k1_x + kpi_w, k1_y + kpi_h], radius=12,
@@ -315,7 +407,6 @@ def generate_feature_graphic():
     hdraw.text((k1_x + 16, k1_y + 10), "Всього в базі:", font=font_kpi_lbl, fill=SLATE_TEXT_SECONDARY)
     hdraw.text((k1_x + 16, k1_y + 28), "1 428 тендерів", font=font_kpi_val, fill=WHITE)
 
-    # Card 2: Bottom KPI
     k2_x, k2_y = 590, 360
     hdraw.rounded_rectangle([k2_x, k2_y, k2_x + 220, k2_y + kpi_h], radius=12,
                             fill=(19, 28, 40, 230), outline=(0, 200, 83, 160), width=1)
@@ -324,13 +415,14 @@ def generate_feature_graphic():
 
     img = Image.alpha_composite(img, hud_layer)
 
-    # Left Side: Typography & Value Propositions
+    # Left Side: Typography & Badges
     draw = ImageDraw.Draw(img)
 
-    # Top Tag
+    # Top Tag: Pulsing Dot + Text (NO EMOJI)
     font_tag = get_font(14, bold=True)
-    draw_pill(draw, 60, 50, "⚡ ВІДКРИТІ ТОРГИ В РЕАЛЬНОМУ ЧАСІ", font_tag,
-              EMERALD_CONTAINER, ON_EMERALD_CONTAINER, padding_x=14, padding_y=6, outline=(0, 200, 83, 160))
+    draw_pill(draw, 60, 50, "ВІДКРИТІ ТОРГИ В РЕАЛЬНОМУ ЧАСІ", font_tag,
+              EMERALD_CONTAINER, ON_EMERALD_CONTAINER, padding_x=14, padding_y=6,
+              outline=(0, 200, 83, 160), icon='pulse_dot', icon_color=EMERALD_LIGHT, icon_size=12)
 
     # App Title
     font_title = get_font(52, bold=True)
@@ -343,32 +435,35 @@ def generate_feature_graphic():
     font_sub = get_font(21, light=True)
     draw.text((60, 168), "Автономний моніторинг тендерів та держзакупівель", font=font_sub, fill=SLATE_TEXT_SECONDARY)
 
-    # 4 Feature Badges (2x2 grid)
+    # 4 Feature Badges with DEDICATED VECTOR ICONS (No Unicode emojis)
     font_badge = get_font(15, bold=True)
     font_desc = get_font(13)
 
     badges = [
-        ("🟢 Live Radar", "Автосканування Prozorro 24/7", 60, 225),
-        ("📊 Excel Експорт", "Готові звіти та таблиці .xlsx", 300, 225),
-        ("✉️ Email Дайджест", "Сповіщення про нові торги", 60, 310),
-        ("💎 100% Автономно", "Локальна база SQLite на пристрої", 300, 310),
+        ("Live Radar", "Автосканування Prozorro 24/7", 60, 225, 'radar', EMERALD_LIGHT),
+        ("Excel Експорт", "Готові звіти та таблиці .xlsx", 300, 225, 'chart', STATUS_INFO),
+        ("Email Дайджест", "Сповіщення про нові торги", 60, 310, 'mail', STATUS_WARNING),
+        ("100% Автономно", "Локальна база SQLite на пристрої", 300, 310, 'shield', STATUS_COMPLETE),
     ]
 
-    for title, desc, bx, by in badges:
+    for title, desc, bx, by, icon_nm, icon_col in badges:
         bw, bh = 225, 68
         draw.rounded_rectangle([bx, by, bx + bw, by + bh], radius=10,
                                fill=SLATE_SURFACE, outline=SLATE_BORDER, width=1)
-        draw.text((bx + 14, by + 12), title, font=font_badge, fill=WHITE)
+        # Vector icon
+        draw_vector_icon(draw, icon_nm, bx + 14, by + 13, 18, icon_col)
+        # Title beside icon
+        draw.text((bx + 38, by + 12), title, font=font_badge, fill=WHITE)
+        # Description below
         draw.text((bx + 14, by + 38), desc, font=font_desc, fill=SLATE_TEXT_MUTED)
 
     # Trust / Disclaimer footer
     font_footer = get_font(13)
-    draw.text((60, 420), "✓ Відкриті дані OpenProcurement • Пошук за кодами ДК 021 (CPV)",
+    draw.text((60, 420), "• Відкриті дані OpenProcurement • Пошук за кодами ДК 021 (CPV)",
               font=font_footer, fill=(100, 160, 220))
-    draw.text((60, 442), "✓ Повна конфіденційність: дані не передаються стороннім серверам",
+    draw.text((60, 442), "• Повна конфіденційність: дані не передаються стороннім серверам",
               font=font_footer, fill=SLATE_TEXT_MUTED)
 
-    # Final RGB conversion & save
     final_img = img.convert("RGB")
     final_path = os.path.join(OUTPUT_DIR, "feature_graphic_1024x500.png")
     final_img.save(final_path, "PNG")
@@ -384,13 +479,12 @@ PHONE_W = 940
 PHONE_H = 1540
 PHONE_R = 48
 
-def create_base_screenshot_canvas(headline_pill, headline_main, headline_sub):
-    """Creates standard 1080x1920 canvas with dark gradient, top marketing header, and phone chassis."""
+def create_base_screenshot_canvas(headline_pill, headline_main, headline_sub, pill_icon='pulse_dot'):
     size = (1080, 1920)
     img = Image.new("RGBA", size, DARK_BG_TOP)
     draw_vertical_gradient(img, (9, 13, 22), (18, 28, 48))
 
-    # Tech grid pattern on background
+    # Tech grid pattern
     grid = Image.new("RGBA", size, (0, 0, 0, 0))
     gdraw = ImageDraw.Draw(grid)
     for x in range(0, 1080, 54):
@@ -402,16 +496,14 @@ def create_base_screenshot_canvas(headline_pill, headline_main, headline_sub):
     draw = ImageDraw.Draw(img)
 
     # Marketing Header Top
-    # Pill
     font_pill = get_font(18, bold=True)
     draw_pill(draw, 70, 50, headline_pill, font_pill,
-              EMERALD_CONTAINER, ON_EMERALD_CONTAINER, padding_x=16, padding_y=8, outline=(0, 200, 83, 180))
+              EMERALD_CONTAINER, ON_EMERALD_CONTAINER, padding_x=16, padding_y=8,
+              outline=(0, 200, 83, 180), icon=pill_icon, icon_color=EMERALD_LIGHT, icon_size=16)
 
-    # Headline Main
     font_h1 = get_font(46, bold=True)
     draw.text((70, 115), headline_main, font=font_h1, fill=WHITE)
 
-    # Headline Subtitle
     font_sub = get_font(24)
     draw.text((70, 185), headline_sub, font=font_sub, fill=SLATE_TEXT_SECONDARY)
 
@@ -423,7 +515,7 @@ def create_base_screenshot_canvas(headline_pill, headline_main, headline_sub):
     shadow = shadow.filter(ImageFilter.GaussianBlur(16))
     img = Image.alpha_composite(img, shadow)
 
-    # Phone Frame Outer Border (Titanium/Dark Slate look)
+    # Phone Frame Outer Border
     draw = ImageDraw.Draw(img)
     draw.rounded_rectangle([PHONE_X, PHONE_Y, PHONE_X + PHONE_W, PHONE_Y + PHONE_H],
                            radius=PHONE_R, fill=SLATE_BG, outline=(50, 70, 95), width=5)
@@ -434,13 +526,13 @@ def create_base_screenshot_canvas(headline_pill, headline_main, headline_sub):
                             PHONE_X + PHONE_W - scr_inset, PHONE_Y + PHONE_H - scr_inset],
                            radius=PHONE_R - 4, fill=SLATE_BG)
 
-    # Android Status Bar (top of phone)
+    # Android Status Bar
     draw_android_status_bar(draw, PHONE_X + 24, PHONE_Y + 16, PHONE_W - 48)
 
     # Android App Top Bar
     draw_app_top_bar(draw, PHONE_X + 24, PHONE_Y + 60, PHONE_W - 48)
 
-    # Android Navigation Bar (bottom of phone)
+    # Android Navigation Bar
     draw_android_bottom_nav(draw, PHONE_X + 24, PHONE_Y + PHONE_H - 120, PHONE_W - 48)
 
     return img
@@ -449,47 +541,48 @@ def draw_android_status_bar(draw, x, y, width):
     font_time = get_font(18, bold=True)
     draw.text((x + 16, y + 4), "12:00", font=font_time, fill=WHITE)
 
-    # Camera hole punch in center
     cx = x + width // 2
     draw.ellipse([cx - 10, y + 4, cx + 10, y + 24], fill=(5, 8, 14), outline=(30, 40, 55), width=1)
 
-    # Status icons on right: 5G, Wi-Fi, Battery 100%
     rx = x + width - 130
     font_stat = get_font(16, bold=True)
     draw.text((rx, y + 4), "5G  Wi-Fi  100%", font=font_stat, fill=SLATE_TEXT_SECONDARY)
 
 def draw_app_top_bar(draw, x, y, width):
-    # App title & logo
     font_top = get_font(26, bold=True)
+    # App logo dot
     draw.ellipse([x + 16, y + 10, x + 38, y + 32], fill=EMERALD_PRIMARY)
     draw.text((x + 48, y + 6), "Prozorro Радар", font=font_top, fill=WHITE)
 
-    # Action buttons on right
+    # Action button on right: Vector Refresh Icon + text "Оновити"
     font_actions = get_font(16, bold=True)
-    draw.rounded_rectangle([x + width - 150, y + 4, x + width - 16, y + 40], radius=8,
+    btn_w = 120
+    bx = x + width - btn_w - 16
+    by = y + 4
+    draw.rounded_rectangle([bx, by, bx + btn_w, by + 36], radius=8,
                            fill=SLATE_SURFACE, outline=SLATE_BORDER, width=1)
-    draw.text((x + width - 138, y + 12), "🔄 Оновити", font=font_actions, fill=EMERALD_LIGHT)
+    draw_vector_icon(draw, 'refresh', bx + 12, by + 10, 16, EMERALD_LIGHT)
+    draw.text((bx + 36, by + 8), "Оновити", font=font_actions, fill=EMERALD_LIGHT)
     draw.line([(x, y + 54), (x + width, y + 54)], fill=SLATE_BORDER, width=1)
 
 def draw_android_bottom_nav(draw, x, y, width, active_index=0):
     draw.line([(x, y), (x + width, y)], fill=SLATE_BORDER, width=1)
     tabs = [
-        ("📡", "Дашборд"),
-        ("📁", "Архів"),
-        ("📊", "Звіти"),
-        ("⚙️", "Налаштування")
+        ("grid", "Дашборд"),
+        ("folder", "Архів"),
+        ("chart", "Звіти"),
+        ("gear", "Налаштування")
     ]
     tab_w = width // len(tabs)
-    font_ico = get_font(22)
     font_lbl = get_font(14, bold=True)
 
-    for i, (ico, name) in enumerate(tabs):
+    for i, (ico_nm, name) in enumerate(tabs):
         tx = x + i * tab_w
         is_active = (i == active_index)
         col = EMERALD_LIGHT if is_active else SLATE_TEXT_MUTED
-        # icon
-        draw.text((tx + tab_w // 2 - 12, y + 10), ico, font=font_ico, fill=col)
-        # label
+        # Vector tab icon
+        draw_vector_icon(draw, ico_nm, tx + tab_w // 2 - 11, y + 10, 22, col)
+        # Tab label
         bbox = font_lbl.getbbox(name)
         lw = bbox[2] - bbox[0]
         draw.text((tx + (tab_w - lw) // 2, y + 38), name, font=font_lbl, fill=col)
@@ -501,11 +594,12 @@ def draw_android_bottom_nav(draw, x, y, width, active_index=0):
 # 3. SCREENSHOT 1: DASHBOARD (1080 x 1920 px)
 # ==============================================================================
 def generate_screenshot_1():
-    print("Generating screenshot_1_dashboard.png...")
+    print("Generating screenshot_1_dashboard.png (Vector Edition)...")
     img = create_base_screenshot_canvas(
-        headline_pill="⚡ АВТОНОМНИЙ РАДАР",
+        headline_pill="АВТОНОМНИЙ РАДАР",
         headline_main="МОНІТОРИНГ У РЕАЛЬНОМУ ЧАСІ",
-        headline_sub="Автоматичне сканування тендерів та оновлення бази 24/7"
+        headline_sub="Автоматичне сканування тендерів та оновлення бази 24/7",
+        pill_icon='pulse_dot'
     )
     draw = ImageDraw.Draw(img)
 
@@ -535,7 +629,6 @@ def generate_screenshot_1():
 
         draw.rounded_rectangle([cx, cy, cx + card_w, cy + card_h], radius=14,
                                fill=SLATE_SURFACE, outline=SLATE_BORDER, width=1)
-        # Left accent stripe
         draw.rounded_rectangle([cx, cy, cx + 5, cy + card_h], radius=2, fill=col)
 
         draw.text((cx + 18, cy + 12), lbl, font=font_m_lbl, fill=SLATE_TEXT_SECONDARY)
@@ -548,10 +641,10 @@ def generate_screenshot_1():
     draw.rounded_rectangle([content_x, scan_y, content_x + content_w, scan_y + scan_h], radius=16,
                            fill=SLATE_SURFACE_VARIANT, outline=(0, 200, 83, 140), width=1)
 
-    # Pulsing live indicator
-    draw.ellipse([content_x + 22, scan_y + 24, content_x + 40, scan_y + 42], fill=EMERALD_LIGHT)
+    # Pulsing live indicator dot
+    draw_vector_icon(draw, 'pulse_dot', content_x + 22, scan_y + 22, 16, EMERALD_LIGHT)
     font_scan_title = get_font(20, bold=True)
-    draw.text((content_x + 50, scan_y + 20), "Сканер активний: перевірка Prozorro", font=font_scan_title, fill=WHITE)
+    draw.text((content_x + 48, scan_y + 18), "Сканер активний: перевірка Prozorro", font=font_scan_title, fill=WHITE)
 
     font_scan_sub = get_font(15)
     draw.text((content_x + 22, scan_y + 55), "Фоновий моніторинг кожні 4 год • Наступний запуск о 14:00",
@@ -564,18 +657,20 @@ def generate_screenshot_1():
     btn_y = scan_y + 105
     btn_h = 42
 
-    # Button 1: Scan now (Emerald Primary)
+    # Button 1: Scan now (Vector Play Icon)
     draw.rounded_rectangle([content_x + 20, btn_y, content_x + 20 + btn_w, btn_y + btn_h], radius=10,
                            fill=EMERALD_PRIMARY)
+    draw_vector_icon(draw, 'play', content_x + 36, btn_y + 14, 14, WHITE)
     font_btn = get_font(16, bold=True)
-    draw.text((content_x + 38, btn_y + 11), "▶ Сканувати зараз", font=font_btn, fill=WHITE)
+    draw.text((content_x + 58, btn_y + 11), "Сканувати зараз", font=font_btn, fill=WHITE)
 
-    # Button 2: Export Excel
+    # Button 2: Export Excel (Vector Chart Icon)
     draw.rounded_rectangle([content_x + 30 + btn_w, btn_y, content_x + 30 + 2 * btn_w, btn_y + btn_h], radius=10,
                            fill=SLATE_SURFACE, outline=SLATE_BORDER, width=1)
-    draw.text((content_x + 50 + btn_w, btn_y + 11), "📊 Експорт в Excel", font=font_btn, fill=SLATE_TEXT_PRIMARY)
+    draw_vector_icon(draw, 'chart', content_x + 46 + btn_w, btn_y + 13, 16, EMERALD_LIGHT)
+    draw.text((content_x + 70 + btn_w, btn_y + 11), "Експорт в Excel", font=font_btn, fill=SLATE_TEXT_PRIMARY)
 
-    # Section Header: Recent Selected Tenders
+    # Section Header
     sec_y = scan_y + scan_h + 20
     font_sec = get_font(20, bold=True)
     draw.text((content_x, sec_y), "Останні відібрані закупівлі", font=font_sec, fill=WHITE)
@@ -590,7 +685,7 @@ def generate_screenshot_1():
             "title": "Капітальний ремонт магістрального шляхопроводу та дорожнього полотна",
             "customer": "КП «Київавтодор» • Київ",
             "price": "14 850 000 ₴",
-            "deadline": "⏳ 4 дні (до 24 лист.)",
+            "deadline": "Термін: 4 дні (до 24 лист.)",
             "urgent": False,
             "fav": True
         },
@@ -599,7 +694,7 @@ def generate_screenshot_1():
             "title": "Постачання серверів високої щільності, мережевих СЗД та ІБЖ для ЦОД",
             "customer": "ДП «Державний центр кіберзахисту»",
             "price": "3 420 000 ₴",
-            "deadline": "⏳ 28 год (до завтра!)",
+            "deadline": "Термін: 28 год (до завтра!)",
             "urgent": True,
             "fav": True
         },
@@ -608,7 +703,7 @@ def generate_screenshot_1():
             "title": "Закупівля дизельного пального Євро-5 та бензину А-95 у талонах",
             "customer": "АТ «Укрпошта» • Київська філія",
             "price": "8 200 000 ₴",
-            "deadline": "⏳ 7 днів (до 28 лист.)",
+            "deadline": "Термін: 7 днів (до 28 лист.)",
             "urgent": False,
             "fav": False
         }
@@ -634,17 +729,16 @@ def generate_screenshot_1():
         draw_pill(draw, content_x + 16, ty + 12, t["cpv"], font_cpv,
                   (20, 35, 55), (140, 190, 240), padding_x=10, padding_y=4)
 
-        # Favorite star
-        star_char = "★" if t["fav"] else "☆"
-        font_star = get_font(22, bold=True)
-        draw.text((content_x + content_w - 36, ty + 10), star_char, font=font_star,
-                  fill=GOLD if t["fav"] else SLATE_TEXT_MUTED)
+        # Favorite star (vector)
+        star_col = GOLD if t["fav"] else SLATE_TEXT_MUTED
+        draw_vector_icon(draw, 'star', content_x + content_w - 38, ty + 12, 18, star_col)
 
-        # Tender Title (2 lines if needed)
+        # Title
         draw.text((content_x + 16, ty + 42), t["title"], font=font_t_title, fill=WHITE)
 
-        # Customer
-        draw.text((content_x + 16, ty + 72), "🏢 " + t["customer"], font=font_cust, fill=SLATE_TEXT_SECONDARY)
+        # Customer with vector building icon
+        draw_vector_icon(draw, 'building', content_x + 16, ty + 74, 14, SLATE_TEXT_SECONDARY)
+        draw.text((content_x + 36, ty + 72), t["customer"], font=font_cust, fill=SLATE_TEXT_SECONDARY)
 
         # Divider
         draw.line([(content_x + 16, ty + 105), (content_x + content_w - 16, ty + 105)],
@@ -652,7 +746,6 @@ def generate_screenshot_1():
 
         # Price & Deadline
         draw.text((content_x + 16, ty + 120), t["price"], font=font_price, fill=EMERALD_LIGHT)
-
         dead_col = STATUS_URGENT if t["urgent"] else SLATE_TEXT_MUTED
         draw.text((content_x + content_w - 240, ty + 125), t["deadline"], font=font_dead, fill=dead_col)
 
@@ -666,11 +759,12 @@ def generate_screenshot_1():
 # 4. SCREENSHOT 2: WIZARD (1080 x 1920 px)
 # ==============================================================================
 def generate_screenshot_2():
-    print("Generating screenshot_2_wizard.png...")
+    print("Generating screenshot_2_wizard.png (Vector Edition)...")
     img = create_base_screenshot_canvas(
-        headline_pill="🎯 ЛЕГКИЙ СТАРТ",
+        headline_pill="ЛЕГКИЙ СТАРТ",
         headline_main="ШВИДКИЙ МАЙСТЕР НАЛАШТУВАННЯ",
-        headline_sub="Готові галузеві пресети та запуск моніторингу в 1 клік"
+        headline_sub="Готові галузеві пресети та запуск моніторингу в 1 клік",
+        pill_icon='radar'
     )
     draw = ImageDraw.Draw(img)
 
@@ -679,11 +773,10 @@ def generate_screenshot_2():
     content_w = PHONE_W - 72
     content_h = PHONE_H - 260
 
-    # Wizard Card Frame (Elevated dialog style)
     draw.rounded_rectangle([content_x, content_y, content_x + content_w, content_y + content_h], radius=20,
                            fill=SLATE_SURFACE, outline=(0, 200, 83, 140), width=2)
 
-    # Step Progress Indicator at Top of Wizard
+    # Step Progress Indicator
     pw_y = content_y + 24
     font_wiz_title = get_font(23, bold=True)
     draw.text((content_x + 24, pw_y), "Майстер швидкого налаштування", font=font_wiz_title, fill=WHITE)
@@ -696,28 +789,27 @@ def generate_screenshot_2():
     bar_w = content_w - 48
     draw.rounded_rectangle([content_x + 24, bar_y, content_x + 24 + bar_w, bar_y + 8], radius=4,
                            fill=SLATE_SURFACE_VARIANT)
-    # Active Step 1 bar (25%)
     draw.rounded_rectangle([content_x + 24, bar_y, content_x + 24 + bar_w // 4, bar_y + 8], radius=4,
                            fill=EMERALD_PRIMARY)
 
-    # Search Bar inside Wizard
+    # Search Bar inside Wizard (Vector Search Icon)
     srch_y = bar_y + 26
     draw.rounded_rectangle([content_x + 24, srch_y, content_x + 24 + bar_w, srch_y + 50], radius=12,
                            fill=SLATE_SURFACE_VARIANT, outline=SLATE_BORDER, width=1)
+    draw_vector_icon(draw, 'search', content_x + 40, srch_y + 16, 18, SLATE_TEXT_MUTED)
     font_srch = get_font(16)
-    draw.text((content_x + 44, srch_y + 14), "🔍 Пошук за назвою або кодом (напр. 4500, IT...)", font=font_srch, fill=SLATE_TEXT_MUTED)
+    draw.text((content_x + 68, srch_y + 14), "Пошук за назвою або кодом (напр. 4500, IT...)", font=font_srch, fill=SLATE_TEXT_MUTED)
 
     # Category Presets Header
     pres_y = srch_y + 68
     font_pres_lbl = get_font(18, bold=True)
     draw.text((content_x + 24, pres_y), "Популярні галузеві напрямки:", font=font_pres_lbl, fill=WHITE)
 
-    # 8 Category Preset Chips (2 columns)
     presets = [
-        ("✓ Будівництво (4500)", "Споруди, дороги, капремонт", True),
-        ("✓ IT та комп'ютери (3023)", "Сервери, софт, оргтехніка", True),
+        ("• Будівництво (4500)", "Споруди, дороги, капремонт", True),
+        ("• IT та комп'ютери (3023)", "Сервери, софт, оргтехніка", True),
         ("  Медицина (3360)", "Ліки, медтехніка, препарати", False),
-        ("✓ Паливо та ПММ (0913)", "Бензин, дизель, автогаз", True),
+        ("• Паливо та ПММ (0913)", "Бензин, дизель, автогаз", True),
         ("  Одяг та форма (1810)", "Спецодяг, текстиль, захист", False),
         ("  Транспорт (6000)", "Вантажні та пасажирські рейси", False),
         ("  Послуги охорони (7971)", "Охоронні системи, патрулі", False),
@@ -752,7 +844,7 @@ def generate_screenshot_2():
                            fill=SLATE_BG, outline=SLATE_BORDER, width=1)
 
     font_n_title = get_font(16, bold=True)
-    draw.text((content_x + 40, next_y + 14), "📋 Наступні кроки майстра:", font=font_n_title, fill=SLATE_TEXT_SECONDARY)
+    draw.text((content_x + 40, next_y + 14), "Наступні кроки майстра:", font=font_n_title, fill=SLATE_TEXT_SECONDARY)
 
     steps_preview = [
         "2. Email для регулярних дайджестів (lonelycattools@gmail.com)",
@@ -773,10 +865,11 @@ def generate_screenshot_2():
     font_wbtn = get_font(17, bold=True)
     draw.text((content_x + 80, btn_area_y + 14), "Пропустити", font=font_wbtn, fill=SLATE_TEXT_SECONDARY)
 
-    # Right Button: Next (Emerald Primary)
+    # Right Button: Next (Vector Arrow)
     draw.rounded_rectangle([content_x + 34 + b_w, btn_area_y, content_x + 24 + bar_w, btn_area_y + 52], radius=12,
                            fill=EMERALD_PRIMARY)
-    draw.text((content_x + 80 + b_w, btn_area_y + 14), "Продовжити  ➔", font=font_wbtn, fill=WHITE)
+    draw.text((content_x + 70 + b_w, btn_area_y + 14), "Продовжити", font=font_wbtn, fill=WHITE)
+    draw_vector_icon(draw, 'arrow_right', content_x + 195 + b_w, btn_area_y + 18, 16, WHITE)
 
     final_img = img.convert("RGB")
     final_path = os.path.join(OUTPUT_DIR, "screenshot_2_wizard.png")
@@ -788,11 +881,12 @@ def generate_screenshot_2():
 # 5. SCREENSHOT 3: ANALYTICS & EXCEL (1080 x 1920 px)
 # ==============================================================================
 def generate_screenshot_3():
-    print("Generating screenshot_3_analytics.png...")
+    print("Generating screenshot_3_analytics.png (Vector Edition)...")
     img = create_base_screenshot_canvas(
-        headline_pill="📊 ЗВІТНІСТЬ ТА АНАЛІЗ",
+        headline_pill="ЗВІТНІСТЬ ТА АНАЛІЗ",
         headline_main="АНАЛІТИКА ТА ЕКСПОРТ В EXCEL",
-        headline_sub="Топ замовників, фінансовий зріз ринку та таблиці .xlsx"
+        headline_sub="Топ замовників, фінансовий зріз ринку та таблиці .xlsx",
+        pill_icon='chart'
     )
     draw = ImageDraw.Draw(img)
 
@@ -815,19 +909,20 @@ def generate_screenshot_3():
     draw.text((content_x + 24, content_y + 92), "428 тендерів у 6 ключових напрямках • Середній чек: 2.91M ₴",
               font=font_s_sub, fill=ON_EMERALD_CONTAINER)
 
-    # Big Prominent Excel Export Button
+    # Big Prominent Excel Export Button with Vector Chart Icon
     excel_y = content_y + sum_h + 16
     excel_h = 75
     draw.rounded_rectangle([content_x, excel_y, content_x + content_w, excel_y + excel_h], radius=14,
                            fill=EMERALD_PRIMARY)
 
+    draw_vector_icon(draw, 'chart', content_x + 28, excel_y + 18, 22, WHITE)
     font_ex_title = get_font(21, bold=True)
     font_ex_sub = get_font(14)
-    draw.text((content_x + 28, excel_y + 14), "📊 Експорт аналітики в Excel (.xlsx)", font=font_ex_title, fill=WHITE)
+    draw.text((content_x + 58, excel_y + 14), "Експорт аналітики в Excel (.xlsx)", font=font_ex_title, fill=WHITE)
     draw.text((content_x + 28, excel_y + 44), "Завантажити повну таблицю з контактами та тендерною документацією",
               font=font_ex_sub, fill=WHITE)
 
-    # Top Customers Card (Bar Chart)
+    # Top Customers Card
     top_y = excel_y + excel_h + 20
     top_h = 490
     draw.rounded_rectangle([content_x, top_y, content_x + content_w, top_y + top_h], radius=16,
@@ -856,7 +951,6 @@ def generate_screenshot_3():
 
     for idx, (name, val, count, pct, col) in enumerate(customers):
         ry = chart_y + idx * row_h
-
         draw.text((content_x + 24, ry), f"{idx + 1}. {name}", font=font_c_name, fill=WHITE)
         draw.text((content_x + content_w - 180, ry), val, font=font_c_val, fill=col)
 
@@ -864,14 +958,13 @@ def generate_screenshot_3():
         bar_w = content_w - 48
         draw.rounded_rectangle([content_x + 24, ry + 28, content_x + 24 + bar_w, ry + 38], radius=5,
                                fill=SLATE_SURFACE_VARIANT)
-        # Bar fill
         fill_w = int(bar_w * pct)
         draw.rounded_rectangle([content_x + 24, ry + 28, content_x + 24 + fill_w, ry + 38], radius=5,
                                fill=col)
 
         draw.text((content_x + 24, ry + 44), count, font=font_c_tenders, fill=SLATE_TEXT_MUTED)
 
-    # Category Breakdown Card at bottom
+    # Category Breakdown Card
     cat_y = top_y + top_h + 18
     cat_h = 160
     draw.rounded_rectangle([content_x, cat_y, content_x + content_w, cat_y + cat_h], radius=16,
@@ -905,11 +998,12 @@ def generate_screenshot_3():
 # 6. SCREENSHOT 4: ARCHIVE & FILTERS (1080 x 1920 px)
 # ==============================================================================
 def generate_screenshot_4():
-    print("Generating screenshot_4_archive.png...")
+    print("Generating screenshot_4_archive.png (Vector Edition)...")
     img = create_base_screenshot_canvas(
-        headline_pill="🔍 ТОЧНИЙ ПОШУК",
+        headline_pill="ТОЧНИЙ ПОШУК",
         headline_main="АРХІВ ТА ФІЛЬТРАЦІЯ ТЕНДЕРІВ",
-        headline_sub="Миттєвий пошук за CPV, ЄДРПОУ замовника, сумою та термінами"
+        headline_sub="Миттєвий пошук за CPV, ЄДРПОУ замовника, сумою та термінами",
+        pill_icon='search'
     )
     draw = ImageDraw.Draw(img)
 
@@ -917,20 +1011,24 @@ def generate_screenshot_4():
     content_y = PHONE_Y + 130
     content_w = PHONE_W - 88
 
-    # Search Bar
+    # Search Bar with Vector Search Icon
     srch_h = 58
     draw.rounded_rectangle([content_x, content_y, content_x + content_w, content_y + srch_h], radius=14,
                            fill=SLATE_SURFACE, outline=SLATE_BORDER, width=1)
+    draw_vector_icon(draw, 'search', content_x + 18, content_y + 19, 20, SLATE_TEXT_MUTED)
     font_s_input = get_font(18)
-    draw.text((content_x + 20, content_y + 16), "🔍 4523, ремонт водопроводу, Київ", font=font_s_input, fill=WHITE)
-    draw.text((content_x + content_w - 40, content_y + 14), "✕", font=font_s_input, fill=SLATE_TEXT_MUTED)
+    draw.text((content_x + 48, content_y + 16), "4523, ремонт водопроводу, Київ", font=font_s_input, fill=WHITE)
+
+    # Clear button "x"
+    font_x = get_font(18, bold=True)
+    draw.text((content_x + content_w - 38, content_y + 16), "×", font=font_x, fill=SLATE_TEXT_MUTED)
 
     # Filter Chips Row
     chips_y = content_y + srch_h + 14
     chips = [
         ("Всі (1 428)", False),
-        ("✓ Активні (312)", True),
-        ("★ Обрані (18)", True),
+        ("Активні (312)", True),
+        ("Обрані (18)", True),
         ("Бюджет > 1M ₴", False),
     ]
     font_fchip = get_font(14, bold=True)
@@ -946,46 +1044,46 @@ def generate_screenshot_4():
     results = [
         {
             "fav": True,
-            "status": "🟢 Прийом пропозицій",
+            "status": "Прийом пропозицій",
             "status_col": STATUS_ACTIVE,
             "cpv": "45231300-8 Будівельні роботи: трубопроводи",
             "title": "Реконструкція водопровідної мережі та насосної станції м. Київ",
             "customer": "ПрАТ «АК «Київводоканал» • ЄДРПОУ 03327664",
             "price": "28 400 000 ₴",
-            "deadline": "⏳ Залишилось 4 дні (до 24 лист.)",
+            "deadline": "Термін: 4 дні (до 24 лист.)",
             "urgent": False
         },
         {
             "fav": True,
-            "status": "🟠 Терміново: < 48 годин",
+            "status": "Терміново: < 48 годин",
             "status_col": STATUS_WARNING,
             "cpv": "30230000-0 Комп'ютерне обладнання",
             "title": "Постачання серверів та ліцензійного програмного забезпечення",
             "customer": "АТ «Укрпошта» • ЄДРПОУ 20306396",
             "price": "4 150 000 ₴",
-            "deadline": "⏳ Залишилось 29 годин (до 21 лист.)",
+            "deadline": "Термін: 29 годин (до 21 лист.)",
             "urgent": True
         },
         {
             "fav": False,
-            "status": "🟢 Прийом пропозицій",
+            "status": "Прийом пропозицій",
             "status_col": STATUS_ACTIVE,
             "cpv": "09132000-3 Бензин та дизельне паливо",
             "title": "Закупівля пального дизельного Євро-5 та бензину А-95 у талонах",
             "customer": "КП «Київпастранс» • ЄДРПОУ 31725604",
             "price": "9 850 000 ₴",
-            "deadline": "⏳ Залишилось 8 днів (до 28 лист.)",
+            "deadline": "Термін: 8 днів (до 28 лист.)",
             "urgent": False
         },
         {
             "fav": False,
-            "status": "🟣 Прекваліфікація",
+            "status": "Прекваліфікація",
             "status_col": STATUS_COMPLETE,
             "cpv": "45233142-6 Ремонт доріг",
             "title": "Поточний середній ремонт автомобільної дороги загального користування",
             "customer": "Служба відновлення та розвитку інфраструктури",
             "price": "42 000 000 ₴",
-            "deadline": "⏳ Залишилось 12 днів",
+            "deadline": "Термін: 12 днів",
             "urgent": False
         }
     ]
@@ -1006,21 +1104,24 @@ def generate_screenshot_4():
         draw.rounded_rectangle([content_x, ry, content_x + content_w, ry + t_card_h], radius=14,
                                fill=SLATE_SURFACE, outline=SLATE_BORDER, width=1)
 
-        # Status Pill & CPV Badge
+        # Status Pill with pulsing color dot (NO EMOJI)
         draw_pill(draw, content_x + 16, ry + 12, t["status"], font_res_cpv,
-                  (20, 35, 55), t["status_col"], padding_x=10, padding_y=4)
+                  (20, 35, 55), t["status_col"], padding_x=10, padding_y=4,
+                  icon='pulse_dot', icon_color=t["status_col"], icon_size=10)
 
-        # Favorite Star
-        font_star = get_font(22, bold=True)
-        draw.text((content_x + content_w - 38, ry + 10), "★" if t["fav"] else "☆",
-                  font=font_star, fill=GOLD if t["fav"] else SLATE_TEXT_MUTED)
+        # Favorite Star (Vector)
+        star_col = GOLD if t["fav"] else SLATE_TEXT_MUTED
+        draw_vector_icon(draw, 'star', content_x + content_w - 38, ry + 12, 18, star_col)
 
         # Title
         draw.text((content_x + 16, ry + 44), t["title"], font=font_res_title, fill=WHITE)
 
-        # CPV & Customer
-        draw.text((content_x + 16, ry + 72), "🏷️ " + t["cpv"], font=font_res_cust, fill=ON_EMERALD_CONTAINER)
-        draw.text((content_x + 16, ry + 94), "🏢 " + t["customer"], font=font_res_cust, fill=SLATE_TEXT_SECONDARY)
+        # CPV & Customer with vector icons
+        draw_vector_icon(draw, 'folder', content_x + 16, ry + 74, 14, ON_EMERALD_CONTAINER)
+        draw.text((content_x + 36, ry + 72), t["cpv"], font=font_res_cust, fill=ON_EMERALD_CONTAINER)
+
+        draw_vector_icon(draw, 'building', content_x + 16, ry + 96, 14, SLATE_TEXT_SECONDARY)
+        draw.text((content_x + 36, ry + 94), t["customer"], font=font_res_cust, fill=SLATE_TEXT_SECONDARY)
 
         # Divider
         draw.line([(content_x + 16, ry + 125), (content_x + content_w - 16, ry + 125)],
@@ -1029,14 +1130,13 @@ def generate_screenshot_4():
         # Price & Deadline
         draw.text((content_x + 16, ry + 142), t["price"], font=font_res_price, fill=EMERALD_LIGHT)
         dead_col = STATUS_URGENT if t["urgent"] else SLATE_TEXT_MUTED
-        draw.text((content_x + content_w - 310, ry + 147), t["deadline"], font=font_res_dead, fill=dead_col)
+        draw.text((content_x + content_w - 260, ry + 147), t["deadline"], font=font_res_dead, fill=dead_col)
 
-    # Floating Action Button at bottom right
+    # Floating Action Button with Vector Arrow Down
     fab_x = content_x + content_w - 80
     fab_y = PHONE_Y + PHONE_H - 220
     draw.ellipse([fab_x, fab_y, fab_x + 64, fab_y + 64], fill=EMERALD_PRIMARY)
-    font_fab = get_font(26, bold=True)
-    draw.text((fab_x + 16, fab_y + 12), "⬇", font=font_fab, fill=WHITE)
+    draw_vector_icon(draw, 'arrow_down', fab_x + 22, fab_y + 20, 20, WHITE)
 
     final_img = img.convert("RGB")
     final_path = os.path.join(OUTPUT_DIR, "screenshot_4_archive.png")
@@ -1045,14 +1145,14 @@ def generate_screenshot_4():
 
 
 def main():
-    print("=== STARTING PLAY STORE ASSET GENERATION ===")
+    print("=== STARTING PLAY STORE ASSET GENERATION (VECTOR EDITION) ===")
     generate_icon()
     generate_feature_graphic()
     generate_screenshot_1()
     generate_screenshot_2()
     generate_screenshot_3()
     generate_screenshot_4()
-    print("=== ALL GRAPHIC ASSETS GENERATED SUCCESSFULLY ===")
+    print("=== ALL ASSETS GENERATED CLEANLY WITHOUT MISSING GLYPHS ===")
 
 if __name__ == "__main__":
     main()
