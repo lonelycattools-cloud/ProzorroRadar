@@ -15,8 +15,18 @@ android {
     versionName = "1.2.0"
   }
 
+  signingConfigs {
+    create("release") {
+      storeFile = file("${rootProject.projectDir}/keystore/release.jks")
+      storePassword = "prozorro_release_2026"
+      keyAlias = "prozorro_release"
+      keyPassword = "prozorro_release_2026"
+    }
+  }
+
   buildTypes {
     release {
+      signingConfig = signingConfigs.getByName("release")
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
     }
@@ -98,21 +108,31 @@ tasks.matching { it.name == "assembleDebug" }.configureEach {
     if (src.exists()) {
       val dest = File(rootDirPath, "ProzorroRadar.apk")
       src.copyTo(dest, overwrite = true)
-      println("Скопійовано APK в корінь проєкту: ${dest.absolutePath}")
+      println("Скопійовано Debug APK в корінь проєкту: ${dest.absolutePath}")
     }
   }
 }
 
-tasks.matching { it.name.startsWith("bundle") }.configureEach {
+tasks.matching { it.name == "assembleRelease" }.configureEach {
   doLast {
-    val bundleDir = File(buildDirPath, "outputs/bundle")
-    if (bundleDir.exists()) {
-      val aabFile = bundleDir.walkTopDown().firstOrNull { it.extension == "aab" }
-      if (aabFile != null && aabFile.exists()) {
-        val dest = File(rootDirPath, "ProzorroRadar.aab")
-        aabFile.copyTo(dest, overwrite = true)
-        println("Скопійовано AAB в корінь проєкту: ${dest.absolutePath}")
-      }
+    val releaseApkDir = File(buildDirPath, "outputs/apk/release")
+    val src = if (releaseApkDir.exists()) releaseApkDir.walkTopDown().firstOrNull { it.extension == "apk" } else null
+    if (src != null && src.exists()) {
+      val dest = File(rootDirPath, "ProzorroRadar_release.apk")
+      src.copyTo(dest, overwrite = true)
+      println("Скопійовано Release APK в корінь проєкту: ${dest.absolutePath}")
+    }
+  }
+}
+
+tasks.matching { it.name == "bundleRelease" }.configureEach {
+  doLast {
+    val releaseBundleDir = File(buildDirPath, "outputs/bundle/release")
+    val src = if (releaseBundleDir.exists()) releaseBundleDir.walkTopDown().firstOrNull { it.extension == "aab" } else null
+    if (src != null && src.exists()) {
+      val dest = File(rootDirPath, "ProzorroRadar_release.aab")
+      src.copyTo(dest, overwrite = true)
+      println("Скопійовано Release AAB в корінь проєкту: ${dest.absolutePath}")
     }
   }
 }

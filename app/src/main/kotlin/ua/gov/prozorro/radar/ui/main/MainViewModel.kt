@@ -17,18 +17,14 @@ import ua.gov.prozorro.radar.model.ReportResult
 import ua.gov.prozorro.radar.model.ReportRow
 import ua.gov.prozorro.radar.model.ScanProgress
 import ua.gov.prozorro.radar.model.Tender
-import ua.gov.prozorro.radar.network.AppUpdateManager
 import ua.gov.prozorro.radar.network.ProzorroScannerEngine
-import ua.gov.prozorro.radar.network.UpdateInfo
 import ua.gov.prozorro.radar.service.ScanForegroundService
-import java.io.File
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = TenderRepository.getInstance(application)
     val preferences = AppPreferences(application)
     private val scannerEngine = ProzorroScannerEngine(application)
-    private val updateManager = AppUpdateManager(application)
 
     val tenders: StateFlow<List<Tender>> = repository.tenders
     val metrics: StateFlow<DashboardMetrics> = repository.metrics
@@ -41,24 +37,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _topCpvs = MutableStateFlow<List<ReportRow>>(emptyList())
     val topCpvs: StateFlow<List<ReportRow>> = _topCpvs.asStateFlow()
 
-    // Update state
-    private val _updateInfo = MutableStateFlow<UpdateInfo?>(null)
-    val updateInfo: StateFlow<UpdateInfo?> = _updateInfo.asStateFlow()
-
-    private val _isCheckingUpdate = MutableStateFlow(false)
-    val isCheckingUpdate: StateFlow<Boolean> = _isCheckingUpdate.asStateFlow()
-
-    private val _downloadProgress = MutableStateFlow<Float?>(null)
-    val downloadProgress: StateFlow<Float?> = _downloadProgress.asStateFlow()
-
-    private val _downloadedApkFile = MutableStateFlow<File?>(null)
-    val downloadedApkFile: StateFlow<File?> = _downloadedApkFile.asStateFlow()
-
     init {
         loadData()
-        if (preferences.autoUpdateEnabled) {
-            checkForUpdate(isManual = false)
-        }
         viewModelScope.launch {
             repository.isScanning.collect { scanning ->
                 if (!scanning) {
@@ -154,73 +134,5 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 Toast.makeText(context, "Помилка експорту: ${res.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
             }
         }
-    }
-
-    // GitHub Updates
-    fun checkForUpdate(isManual: Boolean = false) {
-        viewModelScope.launch {
-            _isCheckingUpdate.value = true
-            val result = updateManager.checkForUpdates()
-            _isCheckingUpdate.value = false
-
-            result.fold(
-                onSuccess = { info ->
-                    if (info != null && info.hasUpdate) {
-                        _updateInfo.value = info
-                    } else if (isManual) {
-                        Toast.makeText(getApplication(), "Встановлено найновішу версію (${info?.currentVersion ?: "1.0"})", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                onFailure = { err ->
-                    if (isManual) {
-                        Toast.makeText(getApplication(), "Перевірка оновлень: ${err.message}", Toast.LENGTH_LONG).show()
-                    }
-                }
-            )
-        }
-    }
-
-    fun startUpdateDownload() {
-        val info = _updateInfo.value ?: return
-        if (info.downloadUrl.isBlank()) {
-            Toast.makeText(getApplication(), "Файл APK відсутній у цьому релізі на GitHub", Toast.LENGTH_LONG).show()
-            return
-        }
-
-        viewModelScope.launch {
-            _downloadProgress.value = 0.01f
-            val res = updateManager.downloadApk(
-                downloadUrl = info.downloadUrl,
-                versionTag = info.latestVersion,
-                onProgress = { progress ->
-                    _downloadProgress.value = progress
-                }
-            )
-            res.fold(
-                onSuccess = { file ->
-                    _downloadProgress.value = null
-                    _downloadedApkFile.value = file
-                    installDownloadedApk()
-                },
-                onFailure = { err ->
-                    _downloadProgress.value = null
-                    Toast.makeText(getApplication(), "Помилка завантаження: ${err.message}", Toast.LENGTH_LONG).show()
-                }
-            )
-        }
-    }
-
-    fun installDownloadedApk() {
-        val file = _downloadedApkFile.value ?: return
-        val res = updateManager.promptInstallApk(file)
-        if (res.isFailure) {
-            Toast.makeText(getApplication(), res.exceptionOrNull()?.message ?: "Помилка встановлення", Toast.LENGTH_LONG).show()
-        }
-    }
-
-    fun dismissUpdateDialog() {
-        _updateInfo.value = null
-        _downloadProgress.value = null
-        _downloadedApkFile.value = null
     }
 }

@@ -116,14 +116,6 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_USER_CONTACT_EMAIL, "lonelycattools@gmail.com") ?: "lonelycattools@gmail.com"
         set(value) = prefs.edit().putString(KEY_USER_CONTACT_EMAIL, value).apply()
 
-    var githubRepo: String
-        get() = prefs.getString(KEY_GITHUB_REPO, "lonelycattools-cloud/ProzorroRadar") ?: "lonelycattools-cloud/ProzorroRadar"
-        set(value) = prefs.edit().putString(KEY_GITHUB_REPO, value).apply()
-
-    var forceUpdate: Boolean
-        get() = prefs.getBoolean(KEY_FORCE_UPDATE, false)
-        set(value) = prefs.edit().putBoolean(KEY_FORCE_UPDATE, value).apply()
-
     var isWizardCompleted: Boolean
         get() = prefs.getBoolean(KEY_WIZARD_COMPLETED, false)
         set(value) = prefs.edit().putBoolean(KEY_WIZARD_COMPLETED, value).apply()
@@ -164,8 +156,6 @@ class AppPreferences(context: Context) {
         private const val KEY_SMTP_PASS = "smtp_pass"
         private const val KEY_SMTP_USE_TLS = "smtp_use_tls"
         private const val KEY_USER_CONTACT_EMAIL = "user_contact_email"
-        private const val KEY_GITHUB_REPO = "github_repo"
-        private const val KEY_FORCE_UPDATE = "force_update"
         private const val KEY_WIZARD_COMPLETED = "wizard_completed"
     }
 }

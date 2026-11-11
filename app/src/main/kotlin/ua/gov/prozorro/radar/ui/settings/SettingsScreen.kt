@@ -99,8 +99,6 @@ import ua.gov.prozorro.radar.ui.theme.EmeraldPrimary
 @Composable
 fun SettingsScreen(
     preferences: AppPreferences,
-    isCheckingUpdate: Boolean = false,
-    onCheckUpdate: () -> Unit = {},
     onResetSyncOffset: () -> Unit = {},
     onCategoriesChanged: () -> Unit = {},
     onClearDatabase: () -> Unit = {},
@@ -119,9 +117,6 @@ fun SettingsScreen(
     var pushEnabled by remember { mutableStateOf(preferences.pushEnabled) }
     var dndEnabled by remember { mutableStateOf(preferences.dndNightModeEnabled) }
 
-    // App Update & GitHub settings
-    var githubRepo by remember { mutableStateOf(preferences.githubRepo) }
-    var forceUpdate by remember { mutableStateOf(preferences.forceUpdate) }
     var syncDateDisplay by remember { mutableStateOf(preferences.lastSyncDate) }
 
     // SMTP settings state
@@ -920,101 +915,30 @@ fun SettingsScreen(
             }
         }
 
-        // Section 6: GitHub In-App Updates
+        // Section 6: About App (Google Play Edition)
         item {
-            SettingsCard(title = "Оновлення додатку (GitHub)", icon = Icons.Default.SystemUpdate) {
-                Text(
-                    text = "Додаток автоматично перевіряє офіційні релізи на GitHub, сповіщає про нові версії та дозволяє оновитися в один клік.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Поточна версія:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})",
-                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                        color = EmeraldPrimary
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = githubRepo,
-                    onValueChange = {
-                        githubRepo = it
-                        preferences.githubRepo = it
-                    },
-                    label = { Text("GitHub репозиторій (owner/repo)") },
-                    placeholder = { Text("lonelycattools-cloud/ProzorroRadar") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Примусове оновлення",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Блокувати роботу, якщо доступна новіша версія",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = forceUpdate,
-                        onCheckedChange = {
-                            forceUpdate = it
-                            preferences.forceUpdate = it
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = EmeraldPrimary,
-                            uncheckedThumbColor = Color.LightGray,
-                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                            uncheckedBorderColor = MaterialTheme.colorScheme.outline
-                        )
-                    )
-                }
-
+            SettingsCard(title = "Про додаток", icon = Icons.Default.Info) {
+                AboutAppRow(label = "Назва додатку", value = "Prozorro Радар")
+                Spacer(modifier = Modifier.height(8.dp))
+                AboutAppRow(label = "Версія", value = "${BuildConfig.VERSION_NAME} (Збірка ${BuildConfig.VERSION_CODE})")
+                Spacer(modifier = Modifier.height(8.dp))
+                AboutAppRow(label = "Пакет (Package)", value = "ua.gov.prozorro.radar")
+                Spacer(modifier = Modifier.height(8.dp))
+                AboutAppRow(label = "Джерело", value = "Google Play Edition")
+                Spacer(modifier = Modifier.height(8.dp))
+                AboutAppRow(label = "Розробник", value = "LonelyCatTools")
                 Spacer(modifier = Modifier.height(12.dp))
-
-                Button(
-                    onClick = onCheckUpdate,
-                    enabled = !isCheckingUpdate,
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    if (isCheckingUpdate) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
-                        Spacer(modifier = Modifier.width(8.dp))
-                    } else {
-                        Icon(imageVector = Icons.Default.CloudSync, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    Text("Перевірити оновлення зараз", fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Додаток використовує відкриті публічні дані системи Prozorro (OpenProcurement API). Не є офіційним органом державної влади.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(12.dp)
+                    )
                 }
             }
         }
@@ -1215,5 +1139,25 @@ fun openAppSystemSettings(context: Context) {
         context.startActivity(intent)
     } catch (e: Exception) {
         e.printStackTrace()
+    }
+}
+
+@Composable
+private fun AboutAppRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }

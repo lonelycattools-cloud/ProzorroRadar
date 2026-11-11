@@ -4,6 +4,4 @@
     <files-path name="export_files" path="exports/" />
     <external-files-path name="external_files" path="exports/" />
     <external-cache-path name="external_cache" path="exports/" />
-    <cache-path name="updates_cache" path="updates/" />
-    <files-path name="updates_files" path="updates/" />
 </paths>

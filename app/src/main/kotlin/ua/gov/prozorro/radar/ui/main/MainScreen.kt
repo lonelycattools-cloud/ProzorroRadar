@@ -38,7 +38,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import ua.gov.prozorro.radar.ui.archive.ArchiveScreen
 import ua.gov.prozorro.radar.ui.components.PermissionsOnboardingDialog
-import ua.gov.prozorro.radar.ui.components.UpdateDialog
 import ua.gov.prozorro.radar.ui.dashboard.DashboardScreen
 import ua.gov.prozorro.radar.ui.help.HelpScreen
 import ua.gov.prozorro.radar.ui.reports.ReportsScreen
@@ -70,11 +69,6 @@ fun MainScreen(
     val scanProgress by viewModel.scanProgress.collectAsStateWithLifecycle()
     val topEntities by viewModel.topEntities.collectAsStateWithLifecycle()
     val topCpvs by viewModel.topCpvs.collectAsStateWithLifecycle()
-
-    val updateInfo by viewModel.updateInfo.collectAsStateWithLifecycle()
-    val isCheckingUpdate by viewModel.isCheckingUpdate.collectAsStateWithLifecycle()
-    val downloadProgress by viewModel.downloadProgress.collectAsStateWithLifecycle()
-    val downloadedApkFile by viewModel.downloadedApkFile.collectAsStateWithLifecycle()
 
     var showPermissionsDialog by remember { mutableStateOf(false) }
     var showSetupWizard by remember { mutableStateOf(!viewModel.preferences.isWizardCompleted) }
@@ -172,8 +166,6 @@ fun MainScreen(
                 AppTab.SETTINGS -> {
                     SettingsScreen(
                         preferences = viewModel.preferences,
-                        isCheckingUpdate = isCheckingUpdate,
-                        onCheckUpdate = { viewModel.checkForUpdate(isManual = true) },
                         onResetSyncOffset = { viewModel.resetSyncOffset() },
                         onCategoriesChanged = { viewModel.loadData() },
                         onClearDatabase = { viewModel.clearAllTenders() },
@@ -238,17 +230,6 @@ fun MainScreen(
                 val startIso = SimpleDateFormat("yyyy-MM-dd'T'00:00:00", Locale.getDefault()).format(cal.time)
                 viewModel.scanFromDate(startIso, cpvs, resetCheckpoint = true)
             }
-        )
-    }
-
-    updateInfo?.let { info ->
-        UpdateDialog(
-            updateInfo = info,
-            downloadProgress = downloadProgress,
-            isReadyToInstall = downloadedApkFile != null,
-            onDismiss = { viewModel.dismissUpdateDialog() },
-            onStartDownload = { viewModel.startUpdateDownload() },
-            onInstall = { viewModel.installDownloadedApk() }
         )
     }
 }
