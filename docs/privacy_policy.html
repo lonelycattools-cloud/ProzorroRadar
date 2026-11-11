@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Політика конфіденційності — Prozorro Радар</title>
+    <style>
+        :root {
+            --bg-color: #0B111A;
+            --surface-color: #131C28;
+            --surface-card: #1B2636;
+            --border-color: #26354A;
+            --text-primary: #F1F5F9;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            --accent-emerald: #00E676;
+            --accent-primary: #00C853;
+            --accent-container: #0A3D22;
+            --table-header: #1E293B;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg-color: #F8FAFC;
+                --surface-color: #FFFFFF;
+                --surface-card: #F1F5F9;
+                --border-color: #E2E8F0;
+                --text-primary: #0F172A;
+                --text-secondary: #475569;
+                --text-muted: #64748B;
+                --accent-emerald: #009624;
+                --accent-primary: #00C853;
+                --accent-container: #DCFCE7;
+                --table-header: #E2E8F0;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.65;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 860px;
+            margin: 0 auto;
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 24px;
+            margin-bottom: 32px;
+        }
+
+        .badge {
+            display: inline-block;
+            background-color: var(--accent-container);
+            color: var(--accent-emerald);
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 20px;
+            margin-bottom: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .meta {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        h2 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            margin-top: 36px;
+            margin-bottom: 16px;
+            color: var(--accent-emerald);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        p {
+            margin-bottom: 16px;
+            color: var(--text-secondary);
+        }
+
+        ul {
+            margin-bottom: 20px;
+            padding-left: 24px;
+            color: var(--text-secondary);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: var(--text-primary);
+        }
+
+        .card-box {
+            background-color: var(--surface-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--table-header);
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        td {
+            color: var(--text-secondary);
+        }
+
+        code {
+            background-color: rgba(148, 163, 184, 0.15);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 0.9em;
+            color: var(--accent-emerald);
+        }
+
+        .disclaimer-box {
+            border-left: 4px solid #F59E0B;
+            background-color: rgba(245, 158, 11, 0.08);
+            padding: 16px 20px;
+            border-radius: 0 12px 12px 0;
+            margin: 24px 0;
+        }
+
+        .contact-box {
+            background: linear-gradient(135deg, rgba(0, 200, 83, 0.1), rgba(11, 17, 26, 0.4));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-top: 32px;
+        }
+
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="badge">Privacy Policy / Політика конфіденційності</div>
+            <h1>Політика конфіденційності додатку «Prozorro Радар»</h1>
+            <div class="meta">
+                <strong>Дата набрання чинності:</strong> 11 листопада 2026 р. | 
+                <strong>Останнє оновлення:</strong> 11 листопада 2026 р.
+            </div>
+        </header>
+
+        <section>
+            <h2>1. Загальні положення та огляд</h2>
+            <p>Ця Політика конфіденційності роз'яснює, як мобільний додаток <strong>«Prozorro Радар» (Prozorro Radar)</strong> взаємодіє з даними користувача під час його використання на пристроях під керуванням ОС Android.</p>
+            <div class="card-box">
+                <p><strong>Головний принцип архітектури додатку:</strong> «Prozorro Радар» побудовано за концепцією <em>Offline-First</em> та максимальної приватності. Ми не збираємо ваші особисті дані, не відстежуємо ваші комерційні інтереси, не використовуємо рекламні трекери та не маємо сторонніх серверів для збереження вашої активності.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>2. Дані, які обробляються додатком</h2>
+            <h3>2.1. Локальні дані на вашому пристрої</h3>
+            <p>Усі нижченаведені дані зберігаються <strong>виключно локально</strong> у захищеній базі даних SQLite (<code>prozorro_radar.db</code>) у внутрішньому сховищі вашого телефону:</p>
+            <ul>
+                <li><strong>Фільтри та параметри пошуку:</strong> обрані коди за ДК 021:2015 (CPV), ключові слова, діапазони очікуваної вартості, коди ЄДРПОУ цільових замовників.</li>
+                <li><strong>Кеш закупівель:</strong> відкриті метадані тендерів (назва, опис, дати, бюджет, статус), завантажені з публічного API Prozorro.</li>
+                <li><strong>Обрані закупівлі:</strong> збережені вами картки тендерів для подальшого аналізу чи підготовки комерційних пропозицій.</li>
+                <li><strong>Налаштування:</strong> періодичність автооновлення, параметри сповіщень, режим «Не турбувати на ніч».</li>
+            </ul>
+
+            <h3>2.2. Електронна пошта для звітів (опціонально)</h3>
+            <p>Якщо ви самостійно вказуєте адресу електронної пошти в розділі «Налаштування» для отримання регулярних дайджестів, ця адреса зберігається виключно на вашому пристрої і використовується виключно для надсилання сформованих дайджестів за вашим запитом.</p>
+
+            <h3>2.3. Дані, які ми НЕ збираємо</h3>
+            <ul>
+                <li>Ми не вимагаємо реєстрації, номерів телефонів або облікових записів.</li>
+                <li>Ми не збираємо геолокаційні дані GPS.</li>
+                <li>Ми не маємо доступу до ваших банківських або платіжних реквізитів.</li>
+                <li>Ми не передаємо та не продаємо будь-які дані третім сторонам або маркетинговим компаніям.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>3. Використання публічних даних (OpenProcurement)</h2>
+            <div class="disclaimer-box">
+                <p><strong>Публічна інформація:</strong> Додаток «Prozorro Радар» звертається до офіційного відкритого інтерфейсу <code>prozorro.gov.ua</code> (OpenProcurement API). Усі відомості про закупівлі є публічними відповідно до Закону України «Про доступ до публічної інформації» та Закону України «Про публічні закупівлі».</p>
+                <p>Додаток є незалежним аналітичним інструментом та не є органом державної влади.</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>4. Системні дозволи Android</h2>
+            <p>Для забезпечення коректного та автономного моніторингу закупівлі додаток може запитувати такі дозволи ОС Android:</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Дозвіл</th>
+                        <th>Призначення</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>POST_NOTIFICATIONS</code></td>
+                        <td>Відображення push-сповіщень про виявлені нові тендери та нагадувань про завершення термінів подання.</td>
+                    </tr>
+                    <tr>
+                        <td><code>FOREGROUND_SERVICE</code> / <code>FOREGROUND_SERVICE_DATA_SYNC</code></td>
+                        <td>Виконання регламентного фонового сканування публічної бази Prozorro з індикацією активності користувачу.</td>
+                    </tr>
+                    <tr>
+                        <td><code>RECEIVE_BOOT_COMPLETED</code></td>
+                        <td>Відновлення графіка автоматичного сканування після перезавантаження смартфону.</td>
+                    </tr>
+                    <tr>
+                        <td><code>REQUEST_IGNORE_BATTERY_OPTIMIZATIONS</code></td>
+                        <td>Запобігання примусової зупинки фонової перевірки енергоощадними механізмами ОС під час режиму сну пристрою.</td>
+                    </tr>
+                    <tr>
+                        <td><code>INTERNET</code> & <code>ACCESS_NETWORK_STATE</code></td>
+                        <td>Отримання публічних даних з API Prozorro та перевірка наявності зв'язку перед початком завантаження.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <h2>5. Видалення та керування даними</h2>
+            <p>Ви маєте повний контроль над усіма даними, збереженими у додатку:</p>
+            <ul>
+                <li>Ви можете у будь-який час скинути збережену точку синхронізації або очистити кеш тендерів через меню <em>Налаштування</em>.</li>
+                <li>Видалення додатку «Prozorro Радар» з пам'яті телефону безповоротно стирає локальну базу даних SQLite, кеш і всі налаштування.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>6. Контакти розробника</h2>
+            <div class="contact-box">
+                <p>Якщо у вас виникли запитання, пропозиції щодо функціоналу або зауваження щодо конфіденційності, будь ласка, звертайтесь до команди розробників:</p>
+                <p><strong>Email для зв'язку:</strong> <code>lonelycattools@gmail.com</code></p>
+                <p><strong>Розробник:</strong> Lonely Cat Tools (Independent Developer)</p>
+            </div>
+        </section>
+
+        <footer>
+            <p>© 2026 Lonely Cat Tools. Всі права захищено. Prozorro Радар.</p>
+        </footer>
+    </div>
+</body>
+</html>
